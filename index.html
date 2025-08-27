@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dodaj do kontaktów</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; padding:24px; }
+    .card { max-width: 520px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; }
+    h1 { font-size: 22px; margin: 0 0 12px; }
+    p { margin: 0 0 16px; color: #334155; }
+    .btn { display: inline-block; padding: 14px 18px; border-radius: 12px; text-decoration: none; border: 1px solid #e5e7eb; }
+    .primary { border-color: #111827; }
+    .hint { font-size: 13px; color: #64748b; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Dodaj wizytówkę</h1>
+    <p>Stuknij przycisk, aby zapisać kontakt w telefonie.</p>
+
+    <!-- iOS button (data: URI vCard -> pokaże kartę kontaktu w Safari) -->
+    <a id="iosBtn" class="btn primary" style="display:none" href="#">
+      Dodaj do kontaktów (iPhone)
+    </a>
+    <div id="iosHint" class="hint" style="display:none">
+      Jeśli widzisz kartę kontaktu w przeglądarce, stuknij „Dodaj”.
+    </div>
+
+    <!-- Android/fallback link do pliku .vcf -->
+    <a id="androidLink" class="btn" style="display:none"
+       href="https://twojadomena.pl/kontakt.vcf" download>
+      Pobierz vCard (.vcf)
+    </a>
+    <div id="androidHint" class="hint" style="display:none">
+      Android zwykle od razu proponuje import; jeśli nie, otwórz pobrany plik.
+    </div>
+
+    <div id="desktop" class="hint" style="display:none">
+      Na komputerze pobierz plik .vcf, a potem otwórz go w aplikacji Kontakty.
+    </div>
+  </div>
+
+<script>
+  // 1) Twoje dane kontaktowe -> zostaną osadzone w iOS data:URI
+  const vcard = [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    "N:Okoń;Michał;;;",
+    "FN:Michał Okoń",
+    "ORG:TS Invest",
+    "TITLE:UX/UI Designer",
+    "TEL;TYPE=CELL:+48600123456",
+    "EMAIL;TYPE=work:kontakt@twojadomena.pl",
+    "URL:https://twojadomena.pl",
+    "END:VCARD"
+  ].join("\\n");
+
+  // 2) Wykrywanie platformy
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+
+  // 3) Przygotuj data:URI dla iOS (tak działa najbliżej „one-tap”)
+  const iosDataUri = "data:text/vcard;charset=utf-8," + encodeURIComponent(vcard);
+
+  if (isAndroid) {
+    // ANDROID: spróbujmy od razu przejść do .vcf (lekki QR, mały w druku)
+    document.getElementById("androidLink").style.display = "inline-block";
+    document.getElementById("androidHint").style.display = "block";
+    // Auto-redirect (możesz wyłączyć, jeśli wolisz bez automatyki):
+    window.location.replace(document.getElementById("androidLink").href);
+  } else if (isIOS) {
+    // iOS: pokaż przycisk, który otwiera kartę kontaktu w Safari
+    const iosBtn = document.getElementById("iosBtn");
+    iosBtn.href = iosDataUri;
+    iosBtn.style.display = "inline-block";
+    document.getElementById("iosHint").style.display = "block";
+  } else {
+    // Desktop / inne
+    document.getElementById("androidLink").style.display = "inline-block";
+    document.getElementById("desktop").style.display = "block";
+  }
+</script>
+</body>
+</html>
