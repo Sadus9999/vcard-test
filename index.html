@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Generator QR – MECARD</title>
   <!-- QRCode.js (bez integrity, prosto z cdnjs) -->
-  <script src="https://cdn.jsdelivr.net/gh/lrsjng/qrcodejs/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/lrsjng/qrcodejs/qrcode_UTF8.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
     .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -69,7 +68,6 @@
             <button id="dlBtn" disabled>Pobierz PNG</button>
             <button id="copyBtn" disabled>Kopiuj MECARD</button>
           </div>
-         <!-- <p class="hint">W MECARD znaki <code>\ ; : ,</code> są automatycznie „ucieczone”.</p>-->
           <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
         </div>
       </section>
@@ -103,7 +101,7 @@
             </select>
           </div>
         </div>
-        <!--<p class="hint" style="margin-top:6px">Do wizytówki zwykle wystarczy 20–25 mm i ECC M/Q (zostaw „quiet zone”).</p>-->
+        <p class="hint" style="margin-top:6px">Do wizytówki zwykle wystarczy 20–25 mm i ECC M/Q (zostaw „quiet zone”).</p>
       </section>
     </div>
   </div>
@@ -159,12 +157,7 @@
         const ecc=eccMap[document.getElementById('qrEcc').value]||QRCode.CorrectLevel.M;
 
         qrcodeEl.innerHTML="";
-        qr=new QRCode(qrcodeEl,{   
-        text: QRCode.UTF8(mecard),
-        width: size,
-        height: size,
-        correctLevel: ecc
-        });
+        qr=new QRCode(qrcodeEl,{text:mecard,width:size,height:size,correctLevel:ecc});
         dlBtn.disabled=false; copyBtn.disabled=false;
       }
 
@@ -187,10 +180,10 @@
       copyBtn.addEventListener('click', copyMECARD);
 
       // Starter values (możesz usunąć)
-      document.getElementById('firstName').value='Imię';
-      document.getElementById('lastName').value='Nazwisko';
-      document.getElementById('org').value='Twoja firma';
-      document.getElementById('title').value='Twoje stanowisko';
+      document.getElementById('firstName').value='Michał';
+      document.getElementById('lastName').value='Okoń';
+      document.getElementById('org').value='TS Invest';
+      document.getElementById('title').value='UX/UI Designer';
       document.getElementById('phone').value='+48600123456';
       document.getElementById('email').value='kontakt@twojadomena.pl';
       document.getElementById('url').value='https://twojadomena.pl';
@@ -198,7 +191,3 @@
   </script>
 </body>
 </html>
-
-
-
-
