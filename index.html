@@ -3,62 +3,242 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dodaj do kontaktów</title>
+  <title>Generator QR – MECARD</title>
+  <!-- Tailwind (CDN) dla szybkiego, czystego wyglądu -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QRCode.js (lekka biblioteka do QR, client-side) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-Mno96GQ9SxDtQ6r0unZcTtf+9t1j3qXc0l8z1d3bNfBS1X8b8o7cH+X9mWb3f5f5p0qvRkq7m3wG4YVPPQ8J+w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; padding:24px; }
-    .card { max-width: 520px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; }
-    h1 { font-size: 22px; margin: 0 0 12px; }
-    p { margin: 0 0 16px; color: #334155; }
-    .btn { display: inline-block; padding: 14px 18px; border-radius: 12px; text-decoration: none; border: 1px solid #e5e7eb; }
-    .primary { border-color: #111827; }
-    .hint { font-size: 13px; color: #64748b; margin-top: 8px; }
+    .card { box-shadow: 0 10px 25px rgba(0,0,0,.06); }
+    .label { @apply text-sm text-slate-600 mb-1; }
+    .input { @apply w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-slate-900/10; }
+    .btn { @apply inline-flex items-center justify-center rounded-xl border border-slate-900 px-4 py-2; }
+    .btn-primary { @apply bg-slate-900 text-white hover:bg-slate-800; }
   </style>
 </head>
-<body>
-  <div class="card">
-    <h1>Dodaj wizytówkę</h1>
-    <p>Wybierz przycisk poniżej, aby zapisać kontakt w telefonie.</p>
+<body class="bg-slate-50 text-slate-900 antialiased">
+  <main class="max-w-5xl mx-auto p-6">
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold">Generator QR (MECARD)</h1>
+      <p class="text-slate-600">Wpisz dane kontaktowe → wygeneruj <b>MECARD</b> i kod QR gotowy na wizytówkę.</p>
+    </header>
 
-    <a id="iosBtn" class="btn primary" style="display:none" href="#">Dodaj do kontaktów (iPhone)</a>
-    <div id="iosHint" class="hint" style="display:none">Po otwarciu karty kontaktu stuknij „Dodaj”.</div>
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Formularz -->
+      <section class="card bg-white rounded-2xl p-5">
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <div class="label">Imię *</div>
+            <input id="firstName" class="input" placeholder="Michał" />
+          </div>
+          <div>
+            <div class="label">Nazwisko *</div>
+            <input id="lastName" class="input" placeholder="Okoń" />
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div class="label">Telefon</div>
+              <input id="phone" class="input" placeholder="+48600123456" />
+            </div>
+            <div>
+              <div class="label">E-mail</div>
+              <input id="email" class="input" placeholder="kontakt@twojadomena.pl" />
+            </div>
+          </div>
+          <div>
+            <div class="label">Firma</div>
+            <input id="org" class="input" placeholder="TS Invest" />
+          </div>
+          <div>
+            <div class="label">Stanowisko</div>
+            <input id="title" class="input" placeholder="UX/UI Designer" />
+          </div>
+          <div>
+            <div class="label">Strona www</div>
+            <input id="url" class="input" placeholder="https://twojadomena.pl" />
+          </div>
 
-    <a id="androidLink" class="btn" style="display:none" href="kontakt.vcf" download>Pobierz vCard (.vcf)</a>
-    <div id="androidHint" class="hint" style="display:none">Jeśli nie otworzy się automatycznie, otwórz pobrany plik.</div>
+          <div class="flex items-center gap-3 pt-2">
+            <button id="genBtn" class="btn btn-primary">Generuj QR</button>
+            <button id="dlBtn" class="btn" disabled>Pobierz PNG</button>
+            <button id="copyBtn" class="btn" disabled>Kopiuj MECARD</button>
+          </div>
+          <p class="text-xs text-slate-500">
+            Uwaga: w MECARD znaki specjalne <code>;</code>, <code>:</code>, <code>,</code> są automatycznie „ucieczone”.
+          </p>
+        </div>
+      </section>
 
-    <div id="desktop" class="hint" style="display:none">Na komputerze pobierz plik .vcf i otwórz w aplikacji Kontakty.</div>
-  </div>
+      <!-- Podgląd QR + wynik -->
+      <section class="card bg-white rounded-2xl p-5">
+        <h2 class="font-medium mb-3">Podgląd</h2>
+        <div id="qrcode" class="flex items-center justify-center w-full min-h-[260px] border border-slate-100 rounded-xl"></div>
 
-<script>
-  // Twoja vCard (zaktualizuj danymi)
-  const vcard = [
-    "BEGIN:VCARD",
-    "VERSION:3.0",
-    "N:Okoń;Michał;;;",
-    "FN:Michał Okoń",
-    "ORG:TS Invest",
-    "TITLE:UX/UI Designer",
-    "TEL;TYPE=CELL:+48600123456",
-    "EMAIL;TYPE=work:kontakt@twojadomena.pl",
-    "URL:https://twojadomena.pl",
-    "END:VCARD"
-  ].join("\n");
+        <div class="mt-4">
+          <div class="label">Wynikowy MECARD</div>
+          <textarea id="mecardOut" class="input font-mono text-sm h-28" readonly></textarea>
+        </div>
 
-  const ua = navigator.userAgent.toLowerCase();
-  const isIOS = /iphone|ipad|ipod/.test(ua);
-  const isAndroid = /android/.test(ua);
+        <details class="mt-4">
+          <summary class="cursor-pointer text-sm text-slate-600">Ustawienia</summary>
+          <div class="grid grid-cols-2 gap-4 mt-3">
+            <div>
+              <div class="label">Rozmiar QR</div>
+              <select id="qrSize" class="input">
+                <option>256</option>
+                <option selected>320</option>
+                <option>384</option>
+                <option>448</option>
+              </select>
+            </div>
+            <div>
+              <div class="label">Korekcja błędów</div>
+              <select id="qrEcc" class="input">
+                <option value="L">L (najlżejszy)</option>
+                <option value="M" selected>M (domyślny)</option>
+                <option value="Q">Q</option>
+                <option value="H">H (najmocniejszy)</option>
+              </select>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mt-2">
+            Do druku wizytówki zwykle wystarczy 256–320 px i ECC „M/Q” (przy zostawieniu „quiet zone” wokół kodu).
+          </p>
+        </details>
+      </section>
+    </div>
+  </main>
 
-  if (isAndroid) {
-    document.getElementById("androidLink").style.display = "inline-block";
-    document.getElementById("androidHint").style.display = "block";
-  } else if (isIOS) {
-    const iosBtn = document.getElementById("iosBtn");
-    iosBtn.href = "data:text/vcard;charset=utf-8," + encodeURIComponent(vcard);
-    iosBtn.style.display = "inline-block";
-    document.getElementById("iosHint").style.display = "block";
-  } else {
-    document.getElementById("androidLink").style.display = "inline-block";
-    document.getElementById("desktop").style.display = "block";
-  }
-</script>
+  <script>
+    // --- Pomocnicze: escapowanie znaków rezerwowych wg MECARD ---
+    function escapeMECARD(value = "") {
+      // MECARD używa ; jako separatora pól i , w polu N: (Nazwisko,Imię).
+      // Wartości pól powinny escape'ować: backslash, semikolon, dwukropek i przecinek.
+      return value
+        .replace(/\\/g, "\\\\")
+        .replace(/;/g, "\\;")
+        .replace(/:/g, "\\:")
+        .replace(/,/g, "\\,")
+        .trim();
+    }
+
+    // Oczyszczanie telefonu – akceptujemy cyfry, + i średnik (na wypadek kilku numerów).
+    function normalizePhone(t = "") {
+      return t.replace(/[^\d+;]/g, "");
+    }
+
+    // Budowa łańcucha MECARD
+    function buildMECARD(fields) {
+      const pts = [];
+      const ln = escapeMECARD(fields.lastName);
+      const fn = escapeMECARD(fields.firstName);
+      if (ln || fn) pts.push(`N:${ln}${ln && fn ? "," : ""}${fn}`);
+
+      if (fields.org)   pts.push(`ORG:${escapeMECARD(fields.org)}`);
+      if (fields.title) pts.push(`TITLE:${escapeMECARD(fields.title)}`);
+
+      const tel = normalizePhone(fields.phone);
+      if (tel) pts.push(`TEL:${tel}`);
+
+      if (fields.email) pts.push(`EMAIL:${escapeMECARD(fields.email)}`);
+      if (fields.url)   pts.push(`URL:${escapeMECARD(fields.url)}`);
+
+      // Ważne: na końcu podwójny ; (koniec rekordu wg zwyczaju MECARD)
+      return `MECARD:${pts.join(";")};;`;
+    }
+
+    // Mapowanie ECC do biblioteki
+    const eccMap = { L: QRCode.CorrectLevel.L, M: QRCode.CorrectLevel.M, Q: QRCode.CorrectLevel.Q, H: QRCode.CorrectLevel.H };
+
+    let qr; // instancja QRCode
+    const qrcodeEl = document.getElementById("qrcode");
+    const mecardOut = document.getElementById("mecardOut");
+    const genBtn = document.getElementById("genBtn");
+    const dlBtn  = document.getElementById("dlBtn");
+    const copyBtn = document.getElementById("copyBtn");
+
+    function generateQR() {
+      const fields = {
+        firstName: document.getElementById("firstName").value,
+        lastName:  document.getElementById("lastName").value,
+        phone:     document.getElementById("phone").value,
+        email:     document.getElementById("email").value,
+        org:       document.getElementById("org").value,
+        title:     document.getElementById("title").value,
+        url:       document.getElementById("url").value,
+      };
+
+      if (!fields.firstName || !fields.lastName) {
+        alert("Podaj co najmniej imię i nazwisko.");
+        return;
+      }
+
+      const mecard = buildMECARD(fields);
+      mecardOut.value = mecard;
+
+      // Parametry QR
+      const size = parseInt(document.getElementById("qrSize").value, 10) || 320;
+      const ecc  = eccMap[document.getElementById("qrEcc").value] || QRCode.CorrectLevel.M;
+
+      // Reset podglądu
+      qrcodeEl.innerHTML = "";
+
+      // Render QR (biblioteka sama tworzy <canvas> lub <img>)
+      qr = new QRCode(qrcodeEl, {
+        text: mecard,
+        width: size,
+        height: size,
+        correctLevel: ecc,
+        // margin (quiet zone) – ta biblioteka nie ma natywnej opcji,
+        // ale dodaje domyślny margines; do druku i tak zostaw białe pole wokół samego obrazka.
+      });
+
+      dlBtn.disabled = false;
+      copyBtn.disabled = false;
+    }
+
+    function downloadPNG() {
+      if (!qr) return;
+      // Spróbuj złapać <canvas>; jeśli biblioteka wyrenderowała <img>, konwertujemy.
+      const canvas = qrcodeEl.querySelector("canvas");
+      if (canvas) {
+        const link = document.createElement("a");
+        link.download = "mecard-qr.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } else {
+        const img = qrcodeEl.querySelector("img");
+        if (img && img.src) {
+          const link = document.createElement("a");
+          link.download = "mecard-qr.png";
+          link.href = img.src;
+          link.click();
+        }
+      }
+    }
+
+    async function copyMECARD() {
+      try {
+        await navigator.clipboard.writeText(mecardOut.value);
+        copyBtn.textContent = "Skopiowano ✔";
+        setTimeout(() => (copyBtn.textContent = "Kopiuj MECARD"), 1200);
+      } catch {
+        alert("Nie udało się skopiować do schowka.");
+      }
+    }
+
+    genBtn.addEventListener("click", generateQR);
+    dlBtn.addEventListener("click", downloadPNG);
+    copyBtn.addEventListener("click", copyMECARD);
+
+    // Podstaw przykładowe wartości (możesz usunąć)
+    document.getElementById("firstName").value = "Michał";
+    document.getElementById("lastName").value  = "Okoń";
+    document.getElementById("org").value       = "TS Invest";
+    document.getElementById("title").value     = "UX/UI Designer";
+    document.getElementById("phone").value     = "+48600123456";
+    document.getElementById("email").value     = "kontakt@twojadomena.pl";
+    document.getElementById("url").value       = "https://twojadomena.pl";
+  </script>
 </body>
 </html>
