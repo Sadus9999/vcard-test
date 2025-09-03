@@ -3,9 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generator QR – MECARD</title>
-  <!-- QRCode.js (bez integrity, prosto z cdnjs) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <title>Generator QR – MECARD (PNG)</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
     .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -17,15 +15,16 @@
     button{border:1px solid #0f172a;border-radius:12px;padding:10px 14px;background:#0f172a;color:#fff;cursor:pointer}
     button[disabled]{opacity:.5;cursor:not-allowed}
     .row{display:flex;gap:8px;flex-wrap:wrap}
-    #qrcode{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px}
+    #preview{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px}
     .hint{font-size:12px;color:#64748b}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    img{max-width:100%;height:auto;border-radius:12px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1 style="margin:0 0 12px">Generator QR (MECARD)</h1>
-    <p class="hint" style="margin:0 0 16px">Wpisz dane i wygeneruj kod QR działający na iOS i Androidzie. Jeśli nie widzisz QR, wciśnij <b>Ctrl/Cmd+Shift+R</b> (twarde odświeżenie).</p>
+    <h1 style="margin:0 0 12px">Generator QR (MECARD) – obraz PNG</h1>
+    <p class="hint" style="margin:0 0 16px">Wpisz dane → kliknij „Generuj QR”. Obrazek zawsze się pojawi (bez zewnętrznych bibliotek). Jeśli nie widzisz zmian, wciśnij <b>Ctrl/Cmd+Shift+R</b>.</p>
 
     <div class="grid">
       <section class="card">
@@ -75,7 +74,7 @@
 
       <section class="card">
         <h3 style="margin:0 0 10px">Podgląd</h3>
-        <div id="qrcode"></div>
+        <div id="preview"></div>
 
         <div style="margin-top:12px">
           <label>Wynikowy MECARD</label>
@@ -108,87 +107,125 @@
   </div>
 
   <script>
-    // Zaczekaj aż biblioteka się załaduje (defer+DOMContentLoaded)
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof QRCode === 'undefined') {
-        const err = document.getElementById('err');
-        err.style.display = 'block';
-        err.textContent = 'Błąd: biblioteka QRCode.js się nie załadowała. Sprawdź blokady (uBlock/NoScript) lub odśwież stronę twardo (Ctrl/Cmd+Shift+R).';
-        return;
+    // Escapowanie wg MECARD
+    function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
+    function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
+    function buildMECARD(f){
+      const pts=[];
+      const ln=esc(f.lastName), fn=esc(f.firstName);
+      if (ln||fn) pts.push(`N:${ln}${ln&&fn?",":""}${fn}`);
+      if (f.org)   pts.push(`ORG:${esc(f.org)}`);
+      if (f.title) pts.push(`TITLE:${esc(f.title)}`);
+      const tel=normPhone(f.phone); if (tel) pts.push(`TEL:${tel}`);
+      if (f.email) pts.push(`EMAIL:${esc(f.email)}`);
+      if (f.url)   pts.push(`URL:${esc(f.url)}`);
+      return `MECARD:${pts.join(";")};;`;
+    }
+
+    const eccMap = { L: 'L', M: 'M', Q: 'Q', H: 'H' }; // dla Google API
+    const preview = document.getElementById('preview');
+    const out = document.getElementById('mecardOut');
+    const genBtn = document.getElementById('genBtn');
+    const dlBtn = document.getElementById('dlBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const err = document.getElementById('err');
+
+    let lastPngUrl = null; // URL obrazka QR (Google)
+    let lastCanvasDataUrl = null; // zrenderowane lokalnie do pobrania
+
+    function generateQR(){
+      err.style.display='none'; err.textContent='';
+      const f={
+        firstName:document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        phone:    document.getElementById('phone').value,
+        email:    document.getElementById('email').value,
+        org:      document.getElementById('org').value,
+        title:    document.getElementById('title').value,
+        url:      document.getElementById('url').value
+      };
+      if(!f.firstName || !f.lastName){
+        alert('Podaj co najmniej imię i nazwisko.'); return;
       }
 
-      // Escapowanie wg MECARD
-      function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
-      function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
-      function buildMECARD(f){
-        const pts=[];
-        const ln=esc(f.lastName), fn=esc(f.firstName);
-        if (ln||fn) pts.push(`N:${ln}${ln&&fn?",":""}${fn}`);
-        if (f.org)   pts.push(`ORG:${esc(f.org)}`);
-        if (f.title) pts.push(`TITLE:${esc(f.title)}`);
-        const tel=normPhone(f.phone); if (tel) pts.push(`TEL:${tel}`);
-        if (f.email) pts.push(`EMAIL:${esc(f.email)}`);
-        if (f.url)   pts.push(`URL:${esc(f.url)}`);
-        return `MECARD:${pts.join(";")};;`;
+      const mecard = buildMECARD(f);
+      out.value = mecard;
+
+      const size = parseInt(document.getElementById('qrSize').value,10) || 320;
+      const ecc  = eccMap[document.getElementById('qrEcc').value] || 'M';
+
+      // Google Chart Image API (PNG)
+      // chs = size x size, chld = ECC|margin(0), chl = payload
+      const url = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chld=${ecc}|0&chl=${encodeURIComponent(mecard)}`;
+      lastPngUrl = url;
+
+      // Wyrenderuj podgląd i przygotuj do pobierania
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        preview.innerHTML = "";
+        preview.appendChild(img);
+        // render do canvas -> dataURL, by pobieranie było lokalne
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        try {
+          lastCanvasDataUrl = canvas.toDataURL('image/png');
+          dlBtn.disabled = false;
+          copyBtn.disabled = false;
+        } catch(e){
+          // nawet jeśli się nie uda, pozwól pobrać bezpośrednio źródło
+          lastCanvasDataUrl = null;
+          dlBtn.disabled = false;
+          copyBtn.disabled = false;
+        }
+      };
+      img.onerror = () => {
+        err.style.display='block';
+        err.textContent='Nie udało się wczytać obrazka QR. Spróbuj ponownie (lub wyłącz blokery).';
+      };
+      img.src = url;
+    }
+
+    function downloadPNG(){
+      if(lastCanvasDataUrl){
+        const a = document.createElement('a');
+        a.href = lastCanvasDataUrl;
+        a.download = 'mecard-qr.png';
+        a.click();
+      } else if (lastPngUrl){
+        // fallback – bezpośredni PNG z Google
+        const a = document.createElement('a');
+        a.href = lastPngUrl;
+        a.download = 'mecard-qr.png';
+        a.click();
       }
+    }
 
-      const eccMap={L:QRCode.CorrectLevel.L,M:QRCode.CorrectLevel.M,Q:QRCode.CorrectLevel.Q,H:QRCode.CorrectLevel.H};
-      const qrcodeEl=document.getElementById('qrcode');
-      const out=document.getElementById('mecardOut');
-      const genBtn=document.getElementById('genBtn');
-      const dlBtn=document.getElementById('dlBtn');
-      const copyBtn=document.getElementById('copyBtn');
-      let qr=null;
-
-      function gen(){
-        const f={
-          firstName:document.getElementById('firstName').value,
-          lastName: document.getElementById('lastName').value,
-          phone:    document.getElementById('phone').value,
-          email:    document.getElementById('email').value,
-          org:      document.getElementById('org').value,
-          title:    document.getElementById('title').value,
-          url:      document.getElementById('url').value
-        };
-        if(!f.firstName||!f.lastName){alert('Podaj co najmniej imię i nazwisko.');return;}
-        const mecard=buildMECARD(f);
-        out.value=mecard;
-
-        const size=parseInt(document.getElementById('qrSize').value,10)||320;
-        const ecc=eccMap[document.getElementById('qrEcc').value]||QRCode.CorrectLevel.M;
-
-        qrcodeEl.innerHTML="";
-        qr=new QRCode(qrcodeEl,{text:mecard,width:size,height:size,correctLevel:ecc});
-        dlBtn.disabled=false; copyBtn.disabled=false;
+    async function copyMECARD(){
+      try{
+        await navigator.clipboard.writeText(out.value);
+        copyBtn.textContent='Skopiowano ✔';
+        setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);
+      }catch{
+        alert('Nie udało się skopiować do schowka.');
       }
+    }
 
-      function downloadPNG(){
-        if(!qr) return;
-        const canvas=qrcodeEl.querySelector('canvas');
-        const img=qrcodeEl.querySelector('img');
-        const link=document.createElement('a'); link.download='mecard-qr.png';
-        if(canvas){ link.href=canvas.toDataURL('image/png'); link.click(); return; }
-        if(img && img.src){ link.href=img.src; link.click(); }
-      }
+    genBtn.addEventListener('click', generateQR);
+    dlBtn.addEventListener('click', downloadPNG);
+    copyBtn.addEventListener('click', copyMECARD);
 
-      async function copyMECARD(){
-        try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);}
-        catch{ alert('Nie udało się skopiować do schowka.'); }
-      }
-
-      genBtn.addEventListener('click', gen);
-      dlBtn.addEventListener('click', downloadPNG);
-      copyBtn.addEventListener('click', copyMECARD);
-
-      // Starter values (możesz usunąć)
-      document.getElementById('firstName').value='Michał';
-      document.getElementById('lastName').value='Okoń';
-      document.getElementById('org').value='TS Invest';
-      document.getElementById('title').value='UX/UI Designer';
-      document.getElementById('phone').value='+48600123456';
-      document.getElementById('email').value='kontakt@twojadomena.pl';
-      document.getElementById('url').value='https://twojadomena.pl';
-    });
+    // przykładowe wartości
+    document.getElementById('firstName').value='Michał';
+    document.getElementById('lastName').value='Okoń';
+    document.getElementById('org').value='TS Invest';
+    document.getElementById('title').value='UX/UI Designer';
+    document.getElementById('phone').value='+48600123456';
+    document.getElementById('email').value='kontakt@twojadomena.pl';
+    document.getElementById('url').value='https://twojadomena.pl';
   </script>
 </body>
 </html>
