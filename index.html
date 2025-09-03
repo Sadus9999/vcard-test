@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Generator QR – MECARD</title>
   <!-- QRCode.js (bez integrity, prosto z cdnjs) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
@@ -32,17 +33,17 @@
         <div class="grid">
           <div>
             <label>Imię *</label>
-            <input id="firstName" placeholder="Michał">
+            <input id="firstName" placeholder="Imię">
           </div>
           <div>
             <label>Nazwisko *</label>
-            <input id="lastName" placeholder="Okoń">
+            <input id="lastName" placeholder="Nazwisko">
           </div>
 
           <div class="grid" style="grid-template-columns:1fr 1fr">
             <div>
               <label>Telefon</label>
-              <input id="phone" placeholder="+48600123456">
+              <input id="phone" placeholder="+48 numer">
             </div>
             <div>
               <label>E-mail</label>
@@ -68,7 +69,6 @@
             <button id="dlBtn" disabled>Pobierz PNG</button>
             <button id="copyBtn" disabled>Kopiuj MECARD</button>
           </div>
-         <!-- <p class="hint">W MECARD znaki <code>\ ; : ,</code> są automatycznie „ucieczone”.</p>-->
           <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
         </div>
       </section>
@@ -102,7 +102,6 @@
             </select>
           </div>
         </div>
-        <!--<p class="hint" style="margin-top:6px">Do wizytówki zwykle wystarczy 20–25 mm i ECC M/Q (zostaw „quiet zone”).</p>-->
       </section>
     </div>
   </div>
@@ -116,6 +115,9 @@
         err.textContent = 'Błąd: biblioteka QRCode.js się nie załadowała. Sprawdź blokady (uBlock/NoScript) lub odśwież stronę twardo (Ctrl/Cmd+Shift+R).';
         return;
       }
+
+      // --- UTF-8 helper (klucz do polskich znaków) ---
+      function toUTF8(s){ return unescape(encodeURIComponent(s)); }
 
       // Escapowanie wg MECARD
       function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
@@ -140,27 +142,99 @@
       const copyBtn=document.getElementById('copyBtn');
       let qr=null;
 
-      function gen(){
-        const f={
-          firstName:document.getElementById('firstName').value,
-          lastName: document.getElementById('lastName').value,
-          phone:    document.getElementById('phone').value,
-          email:    document.getElementById('email').value,
-          org:      document.getElementById('org').value,
-          title:    document.getElementById('title').value,
-          url:      document.getElementById('url').value
-        };
-        if(!f.firstName||!f.lastName){alert('Podaj co najmniej imię i nazwisko.');return;}
-        const mecard=buildMECARD(f);
-        out.value=mecard;
+      function gen() {
+  const f = {
+    firstName: document.getElementById('firstName').value,
+    lastName:  document.getElementById('lastName').value,
+    phone:     document.getElementById('phone').value,
+    email:     document.getElementById('email').value,
+    org:       document.getElementById('org').value,
+    title:     document.getElementById('title').value,
+    url:       document.getElementById('url').value
+  };
+  if (!f.firstName || !f.lastName) { alert('Podaj co najmniej imię i nazwisko.'); return; }
 
-        const size=parseInt(document.getElementById('qrSize').value,10)||320;
-        const ecc=eccMap[document.getElementById('qrEcc').value]||QRCode.CorrectLevel.M;
+  // Helpery z Twojego kodu (muszą istnieć wyżej):
+  // - toUTF8(s)
+  // - buildMECARD(f)
 
-        qrcodeEl.innerHTML="";
-        qr=new QRCode(qrcodeEl,{text:mecard,width:size,height:size,correctLevel:ecc});
-        dlBtn.disabled=false; copyBtn.disabled=false;
+  const mecard = buildMECARD(f);
+  out.value = mecard;
+
+  // ustawienia z UI
+  const sizeSelect = document.getElementById('qrSize');
+  const basePx  = parseInt(sizeSelect.value, 10) || 320;
+
+  // ECC -> litera dla qrcode-generator (L/M/Q/H)
+  // Żeby zmaksymalizować pojemność, bierzemy L; jak chcesz, możesz czytać z selecta.
+  const eccLetter = 'L';
+
+  // Spróbuj rosnących "typeNumber" = większa wersja QR (większa pojemność)
+  const tryTypes = [10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
+
+  let made = false;
+  let qr = null;
+
+  for (const t of tryTypes) {
+    try {
+      // qrcode(typeNumber, errorCorrectLevel)
+      qr = qrcode(t, eccLetter);
+      // Dodaj dane jako bajty (UTF-8)
+      qr.addData(toUTF8(mecard), 'Byte');
+      qr.make(); // <- jeśli za mała wersja, tu poleci wyjątek
+      made = true;
+      break;
+    } catch (e) {
+      // próbujemy większą wersję
+      continue;
+    }
+  }
+
+  const errBox = document.getElementById('err');
+  qrcodeEl.innerHTML = "";
+
+  if (!made) {
+    errBox.style.display = 'block';
+    errBox.textContent = 'Nawet największa wersja QR (40, ECC L) nie mieści danych. Skróć URL/stanowisko/firme.';
+    dlBtn.disabled = true;
+    copyBtn.disabled = false; // kopiowanie tekstu niech działa
+    return;
+  }
+
+  // Render: przerysuj macierz QR na <canvas> o żądanej wielkości w px
+  const count = qr.getModuleCount();
+  const pxPerModule = Math.floor(basePx / count) || 1;
+  const sizePx = pxPerModule * count;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = sizePx;
+  canvas.height = sizePx;
+  const ctx = canvas.getContext('2d');
+
+  // tło białe
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,sizePx,sizePx);
+  // moduły
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) {
+        ctx.fillRect(c * pxPerModule, r * pxPerModule, pxPerModule, pxPerModule);
       }
+    }
+  }
+
+  qrcodeEl.appendChild(canvas);
+
+  // włącz przyciski
+  dlBtn.disabled = false;
+  copyBtn.disabled = false;
+
+  // schowaj ewentualny error
+  errBox.style.display = 'none';
+  errBox.textContent = '';
+}
+
 
       function downloadPNG(){
         if(!qr) return;
@@ -180,17 +254,9 @@
       dlBtn.addEventListener('click', downloadPNG);
       copyBtn.addEventListener('click', copyMECARD);
 
-      // Starter values (możesz usunąć)
-      document.getElementById('firstName').value='Imię';
-      document.getElementById('lastName').value='Nazwisko';
-      document.getElementById('org').value='Twoja firma';
-      document.getElementById('title').value='Twoje stanowisko';
-      document.getElementById('phone').value='+48600123456';
-      document.getElementById('email').value='kontakt@twojadomena.pl';
-      document.getElementById('url').value='https://twojadomena.pl';
+      // Starter values (możesz zmienić)
+   
     });
   </script>
 </body>
 </html>
-
-
