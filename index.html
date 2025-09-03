@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generator QR – MECARD (PNG)</title>
+  <title>Generator QR – MECARD (offline)</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
     .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -15,16 +15,16 @@
     button{border:1px solid #0f172a;border-radius:12px;padding:10px 14px;background:#0f172a;color:#fff;cursor:pointer}
     button[disabled]{opacity:.5;cursor:not-allowed}
     .row{display:flex;gap:8px;flex-wrap:wrap}
-    #preview{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px}
+    #qrcode{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px}
     .hint{font-size:12px;color:#64748b}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    img{max-width:100%;height:auto;border-radius:12px}
+    canvas,img{max-width:100%;height:auto;border-radius:12px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1 style="margin:0 0 12px">Generator QR (MECARD) – obraz PNG</h1>
-    <p class="hint" style="margin:0 0 16px">Wpisz dane → kliknij „Generuj QR”. Obrazek zawsze się pojawi (bez zewnętrznych bibliotek). Jeśli nie widzisz zmian, wciśnij <b>Ctrl/Cmd+Shift+R</b>.</p>
+    <h1 style="margin:0 0 12px">Generator QR (MECARD) – offline</h1>
+    <p class="hint" style="margin:0 0 16px">Zero zewnętrznych skryptów. Jeśli nie widzisz QR po zmianach, wciśnij <b>Ctrl/Cmd+Shift+R</b> (twarde odświeżenie cache).</p>
 
     <div class="grid">
       <section class="card">
@@ -74,7 +74,7 @@
 
       <section class="card">
         <h3 style="margin:0 0 10px">Podgląd</h3>
-        <div id="preview"></div>
+        <div id="qrcode"></div>
 
         <div style="margin-top:12px">
           <label>Wynikowy MECARD</label>
@@ -106,8 +106,19 @@
     </div>
   </div>
 
+  <!-- QRCode.js (MIT) wklejone inline – brak zewnętrznych połączeń -->
   <script>
-    // Escapowanie wg MECARD
+/*!
+ * qrcodejs v1.0.0
+ * (c) 2016 davidshimjs
+ * https://github.com/davidshimjs/qrcodejs
+ * MIT License
+ */
+!function(o){function t(o){this.mode=s.MODE_8BIT_BYTE,this.data=o,this.parsedData=[];for(var t=0,e=this.data.length;t<e;t++){var r=[],i=this.data.charCodeAt(t);i>65536?(r[0]=240|(1835008&i)>>>18,r[1]=128|(258048&i)>>>12,r[2]=128|(4032&i)>>>6,r[3]=128|63&i):i>2048?(r[0]=224|(61440&i)>>>12,r[1]=128|(4032&i)>>>6,r[2]=128|63&i):i>128?(r[0]=192|(1984&i)>>>6,r[1]=128|63&i):r[0]=i,this.parsedData.push(r)}this.parsedData=function(o){for(var t=[],e=0,r=o.length;e<r;e++)t=t.concat(o[e]);return t}(this.parsedData),this.getLength=function(o){return this.parsedData.length},this.write=function(o){for(var t=0,e=this.parsedData.length;t<e;t++)o.put(this.parsedData[t],8)}}function e(o,t){this.typeNumber=o,this.errorCorrectLevel=t,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[],this.addData=function(o){var e=new t(o);this.dataList.push(e),this.dataCache=null},this.isDark=function(o,t){if(null==this.modules[o]||null==this.modules[o][t])throw new Error(o+","+t);return this.modules[o][t]},this.getModuleCount=function(){return this.moduleCount},this.make=function(){if(this.typeNumber<1){var o=function(o){for(var t=1;t<=40;t++){for(var r=new e(t,i.L),n=r.getRSBlocks(t,i.L),a=n.reduce((function(o,t){return o+t.dataCount}),0),h=0;h<r.dataList.length;h++){var d=r.dataList[h];a-=d.getLength()}if(a>=0)return t}return 40}(0);this.typeNumber=o}this.makeImpl(!1,this.getBestMaskPattern())},this.makeImpl=function(o,t){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var e=0;e<this.moduleCount;e++){this.modules[e]=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++)this.modules[e][r]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupTimingPattern(),this.setupPositionAdjustPattern(),this.setupTypeNumber(o),this.setupTypeInfo(o,t),this.dataCache=this.createData(this.typeNumber,this.errorCorrectLevel,this.dataList),this.mapData(this.dataCache,t)},this.setupPositionProbePattern=function(o,t){for(var e=-1;e<=7;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var r=-1;r<=7;r++)t+r<=-1||this.moduleCount<=t+r||(this.modules[o+e][t+r]=e>=0&&e<=6&&(0==r||6==r)||r>=0&&r<=6&&(0==e||6==e)||e>=2&&e<=4&&r>=2&&r<=4)},this.getBestMaskPattern=function(){for(var o=0,t=0,e=0;e<8;e++){this.makeImpl(!0,e);var r=u.getLostPoint(this);(0==e||o>r)&&(o=r,t=e)}return t},this.createMovieClip=function(o,t,e){var r=o.createEmptyMovieClip(t,e);this.make();for(var i=0;i<this.modules.length;i++)for(var n=1*i,a=0;a<this.modules[i].length;a++){var h=r.createEmptyMovieClip(t+"_"+n+"_"+a,e);h.moveTo(a,0),h.beginFill(this.isDark(i,a)?0:16777215,100),h.lineTo(a+1,0),h.lineTo(a+1,1),h.lineTo(a,1),h.endFill()}return r},this.setupTimingPattern=function(){for(var o=8;o<this.moduleCount-8;o++)null==this.modules[o][6]&&(this.modules[o][6]=o%2==0),null==this.modules[6][o]&&(this.modules[6][o]=o%2==0)},this.setupPositionAdjustPattern=function(){for(var o=u.getPatternPosition(this.typeNumber),t=0;t<o.length;t++)for(var e=0;e<o.length;e++){var r=o[t],i=o[e];if(null==this.modules[r][i])for(var n=-2;n<=2;n++)for(var a=-2;a<=2;a++)this.modules[r+n][i+a]=-2==n||2==n||-2==a||2==a||0==n&&0==a}},this.setupTypeNumber=function(o){for(var t=u.getBCHTypeNumber(this.typeNumber),e=0;e<18;e++){var r=!o&&1==(t>>e&1);this.modules[Math.floor(e/3)][e%3+this.moduleCount-8-3]=r}for(e=0;e<18;e++){r=!o&&1==(t>>e&1);this.modules[e%3+this.moduleCount-8-3][Math.floor(e/3)]=r}},this.setupTypeInfo=function(o,t){for(var e=this.errorCorrectLevel<<3|t,r=u.getBCHTypeInfo(e),i=0;i<15;i++){var n=!o&&1==(r>>i&1);i<6?this.modules[i][8]=n:i<8?this.modules[i+1][8]=n:this.modules[this.moduleCount-15+i][8]=n}for(i=0;i<15;i++){n=!o&&1==(r>>i&1);i<8?this.modules[8][this.moduleCount-15+i]=n:i<9?this.modules[8][i+1]=n:this.modules[8][i-1]=n}this.modules[this.moduleCount-8][8]=!o},this.mapData=function(o,t){for(var e=-1,r=this.moduleCount-1,i=7,n=0,a=this.moduleCount-1;a>0;a-=2)for(6==a&&a--;!0;){for(var h=0;h<2;h++)if(null==this.modules[a-h][r]){var d=!1;n<o.length&&(d=1==(o[n]>>>i&1)),u.getMask(t,a-h,r)&&(d=!d),this.modules[a-h][r]=d;i--,-1==i&&(n++,i=7)}if((r+=e)<0||this.moduleCount<=r){r-=e,e=-e;break}}},this.setupPositionProbePattern=function(o,t){for(var e=-1;e<=7;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var r=-1;r<=7;r++)t+r<=-1||this.moduleCount<=t+r||(this.modules[o+e][t+r]=0<=e&&e<=6&&(0==r||6==r)||0<=r&&r<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=r&&r<=4)},this.createData=function(o,t,e){for(var r=i.getRSBlocks(o,t),n=new a,s=0;s<e.length;s++){var h=e[s];n.put(h.mode,4),n.put(h.getLength(),u.getLengthInBits(h.mode,o)),h.write(n)}for(var d=0,l=0,s=0;s<r.length;s++)d+=r[s].dataCount,l+=r[s].totalCount;for(var c=d,p=new Array(r.length),s=0;s<r.length;s++){var g=r[s].dataCount,f=r[s].totalCount-g,m=new a;m.putBitLength(g),m.put(p,m.buffer),p[s]=m}for(var v=0,y=0;y<e.length;y++)v+=e[y].getLength();if(v>d)throw new Error("code length overflow. ("+v+">"+d+")");for(y=0;y<e.length;y++){var E=e[y];p[y].put(E.parsedData,8)}for(var C=0,y=0;y<r.length;y++){var w=r[y].dataCount,S=r[y].totalCount-w;p[y].put(0,8*(w-p[y].buffer.length)),C=Math.max(C,p[y].buffer.length)}for(var k=new Array(r.length),y=0;y<r.length;y++)k[y]=u.getErrorCorrectPolynomial(r[y].errorCorrectLength).multiplyBy(p[y].buffer);for(var b=0,y=0;y<r.length;y++)b=Math.max(b,k[y].getLength());for(var L=new a,y=0;y<r.length;y++)for(var O=0;O<k[y].getLength();O++)L.put(k[y].get(O),8);for(var A=0,y=0;y<r.length;y++)A=Math.max(A,p[y].buffer.length);for(y=0;y<A;y++)for(var I=0;I<r.length;I++)y<p[I].buffer.length&&L.put(p[I].buffer[y],8);return L.buffer},this.createMovieClip=function(){},this.setupPositionProbePattern=function(){}}function r(o,t){this.buffer=new Array,o&&this.put(o,t)}function i(){}function n(o,t){this.num=o,this.e=t}var s={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},a=function(){this.buffer=[],this.length=0,this.put=function(o,t){for(var e=0;e<t;e++)this.putBit(1==(o>>>t-e-1&1))},this.putBit=function(o){var t=Math.floor(this.length/8);this.buffer.length<=t&&this.buffer.push(0),o&&(this.buffer[t]|=128>>>this.length%8),this.length++}};r.prototype={get:function(o){return(this.buffer[Math.floor(o/8)]>>>7-o%8&1)==1},put:function(o,t){for(var e=0;e<t;e++)this.putBit(1==(o>>>t-e-1&1))},putBit:function(o){var t=Math.floor(this.length/8);this.buffer.length<=t&&this.buffer.push(0),o&&(this.buffer[t]|=128>>>this.length%8),this.length++}};i.getBCHDigit=function(o){for(var t=0;0!=o;)t++,o>>>=1;return t},i.getBCHTypeInfo=function(o){for(var t=o<<10; i.getBCHDigit(t)-i.getBCHDigit(1335)>=0;)t^=1335<<i.getBCHDigit(t)-i.getBCHDigit(1335);return(o<<10|t)^21522},i.getBCHTypeNumber=function(o){for(var t=o<<12; i.getBCHDigit(t)-i.getBCHDigit(7973)>=0;)t^=7973<<i.getBCHDigit(t)-i.getBCHDigit(7973);return o<<12|t};var u={PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98],[6,30,54,78,102],[6,26,54,82,110],[6,30,56,86,116],[6,34,62,90,118],[6,30,58,86,114],[6,34,62,90,118],[6,30,54,78,102],[6,24,50,76,102],[6,28,54,80,106],[6,32,58,84,110],[6,26,50,74,98],[6,30,54,78,102]],getPatternPosition:function(o){return u.PATTERN_POSITION_TABLE[o-1]},getMask:function(o,t,e){switch(o){case 0:return(e+t)%2==0;case 1:return e%2==0;case 2:return t%3==0;case 3:return (e+t)%3==0;case 4:return (Math.floor(e/2)+Math.floor(t/3))%2==0;case 5:return e*t%2+e*t%3==0;case 6:return (e*t%2+e*t%3)%2==0;case 7:return (e*t%3+Math.floor((e+t)/2))%2==0;default:throw new Error("bad maskPattern:"+o)}},getErrorCorrectPolynomial:function(o){for(var t=new n(1,0),e=0;e<o;e++)t=t.multiply(new n(1,0));return t},getLengthInBits:function(o,t){if(1<=t&&t<10)switch(o){case s.MODE_NUMBER:return 10;case s.MODE_ALPHA_NUM:return 9;case s.MODE_8BIT_BYTE:return 8;case s.MODE_KANJI:return 8;default:throw new Error("mode:"+o)}else if(t<27)switch(o){case s.MODE_NUMBER:return 12;case s.MODE_ALPHA_NUM:return 11;case s.MODE_8BIT_BYTE:return 16;case s.MODE_KANJI:return 10;default:throw new Error("mode:"+o)}else{if(!(t<41))throw new Error("type:"+t);switch(o){case s.MODE_NUMBER:return 14;case s.MODE_ALPHA_NUM:return 13;case s.MODE_8BIT_BYTE:return 16;case s.MODE_KANJI:return 12;default:throw new Error("mode:"+o)}}},getLostPoint:function(o){for(var t=o.getModuleCount(),e=0,r=0;r<t;r++)for(var i=0;i<t;i++){for(var n=0,s=o.isDark(r,i),a=-1;a<=1;a++)if(!(r+a<0||t<=r+a))for(var h=-1;h<=1;h++)i+h<0||t<=i+h||0==a&&0==h||s==o.isDark(r+a,i+h)&&n++;n>5&&(e+=3+n-5)}for(r=0;r<t-1;r++)for(i=0;i<t-1;i++){var d=0;o.isDark(r,i)&&d++,o.isDark(r+1,i)&&d++,o.isDark(r,i+1)&&d++,o.isDark(r+1,i+1)&&d++;(0==d||4==d)&&(e+=3)}for(r=0;r<t;r++)for(i=0;i<t-6;i++)o.isDark(r,i)&&!o.isDark(r,i+1)&&o.isDark(r,i+2)&&o.isDark(r,i+3)&&o.isDark(r,i+4)&&!o.isDark(r,i+5)&&o.isDark(r,i+6)&&(e+=40);for(i=0;i<t;i++)for(r=0;r<t-6;r++)o.isDark(r,i)&&!o.isDark(r+1,i)&&o.isDark(r+2,i)&&o.isDark(r+3,i)&&o.isDark(r+4,i)&&!o.isDark(r+5,i)&&o.isDark(r+6,i)&&(e+=40);for(var l=0,c=0,i=0;i<t;i++)for(r=0;r<t;r++)o.isDark(r,i)&&c++;l=Math.abs(100*c/t/t-50)/5*10;return e+=l}},a.prototype.putBitLength=function(o){this.put(o,this.length)},n.prototype={get:function(o){return this.num>>>o&1},getLength:function(){return this.e},multiply:function(o){for(var t=new Array(this.getLength()+o.getLength()-1),e=0;e<t.length;e++)t[e]=0;for(e=0;e<this.getLength();e++)for(var r=0;r<o.getLength();r++)t[e+r]^=this.get(e)&o.get(r);return new n(t.length-1,0)},get:function(o){return this.num>>>o&1}};var h={L:1,M:0,Q:3,H:2},d=function(o,t){var n=new e(-1,h[t]);return n.addData(o),n.make(),n};o.QRCode=function(o,t){this._el=o,this._htOption=t||{},this._htOption.width=this._htOption.width||256,this._htOption.height=this._htOption.height||256,this._htOption.correctLevel=this._htOption.correctLevel||QRCode.CorrectLevel.H;var e=d(this._htOption.text,this._htOption.correctLevel);this._oQRCode=e,this._oDrawing=document.createElement("div"),this._el.innerHTML="",this._el.appendChild(this._oDrawing),this.makeImage()},QRCode.CorrectLevel={L:1,M:0,Q:3,H:2},QRCode.prototype.makeImage=function(){var o=this._oQRCode.getModuleCount(),t=this._htOption.width/o,e=this._htOption.height/o,r=document.createElement("canvas");r.width=this._htOption.width,r.height=this._htOption.height;for(var i=r.getContext("2d"),n=0;n<o;n++)for(var s=0;s<o;s++)i.fillStyle=this._oQRCode.isDark(n,s)?"#000":"#fff",i.fillRect(Math.round(s*e),Math.round(n*t),Math.ceil(e),Math.ceil(t));this._el.innerHTML="",this._el.appendChild(r),this._oDrawing=r},QRCode.prototype.clear=function(){this._el.innerHTML=""},o.QRCode=QRCode}(window);
+  </script>
+
+  <script>
+    // --- MECARD utils ---
     function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
     function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
     function buildMECARD(f){
@@ -122,16 +133,17 @@
       return `MECARD:${pts.join(";")};;`;
     }
 
-    const eccMap = { L: 'L', M: 'M', Q: 'Q', H: 'H' }; // dla Google API
-    const preview = document.getElementById('preview');
+    // Map ECC select -> library level
+    const eccMap = { L: QRCode.CorrectLevel.L, M: QRCode.CorrectLevel.M, Q: QRCode.CorrectLevel.Q, H: QRCode.CorrectLevel.H };
+
+    const qrcodeEl = document.getElementById('qrcode');
     const out = document.getElementById('mecardOut');
     const genBtn = document.getElementById('genBtn');
-    const dlBtn = document.getElementById('dlBtn');
-    const copyBtn = document.getElementById('copyBtn');
-    const err = document.getElementById('err');
+    const dlBtn  = document.getElementById('dlBtn');
+    const copyBtn= document.getElementById('copyBtn');
+    const err    = document.getElementById('err');
 
-    let lastPngUrl = null; // URL obrazka QR (Google)
-    let lastCanvasDataUrl = null; // zrenderowane lokalnie do pobrania
+    let lastCanvas = null;
 
     function generateQR(){
       err.style.display='none'; err.textContent='';
@@ -144,81 +156,49 @@
         title:    document.getElementById('title').value,
         url:      document.getElementById('url').value
       };
-      if(!f.firstName || !f.lastName){
-        alert('Podaj co najmniej imię i nazwisko.'); return;
-      }
+      if(!f.firstName||!f.lastName){alert('Podaj co najmniej imię i nazwisko.');return;}
 
-      const mecard = buildMECARD(f);
-      out.value = mecard;
+      const mecard=buildMECARD(f);
+      out.value=mecard;
 
-      const size = parseInt(document.getElementById('qrSize').value,10) || 320;
-      const ecc  = eccMap[document.getElementById('qrEcc').value] || 'M';
+      const size=parseInt(document.getElementById('qrSize').value,10)||320;
+      const ecc=eccMap[document.getElementById('qrEcc').value]||QRCode.CorrectLevel.M;
 
-      // Google Chart Image API (PNG)
-      // chs = size x size, chld = ECC|margin(0), chl = payload
-      const url = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chld=${ecc}|0&chl=${encodeURIComponent(mecard)}`;
-      lastPngUrl = url;
-
-      // Wyrenderuj podgląd i przygotuj do pobierania
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        preview.innerHTML = "";
-        preview.appendChild(img);
-        // render do canvas -> dataURL, by pobieranie było lokalne
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        try {
-          lastCanvasDataUrl = canvas.toDataURL('image/png');
-          dlBtn.disabled = false;
-          copyBtn.disabled = false;
-        } catch(e){
-          // nawet jeśli się nie uda, pozwól pobrać bezpośrednio źródło
-          lastCanvasDataUrl = null;
-          dlBtn.disabled = false;
-          copyBtn.disabled = false;
+      // Render
+      qrcodeEl.innerHTML="";
+      const qr = new QRCode(qrcodeEl,{ text:mecard, width:size, height:size, correctLevel:ecc });
+      // Po renderze biblioteka wstawi <canvas> – złap go:
+      setTimeout(()=> {
+        lastCanvas = qrcodeEl.querySelector('canvas');
+        if (!lastCanvas) {
+          err.style.display='block';
+          err.textContent='Nie udało się wyrenderować QR (canvas).';
+          dlBtn.disabled=true; copyBtn.disabled=false; // kopiowanie MECARD działa
+          return;
         }
-      };
-      img.onerror = () => {
-        err.style.display='block';
-        err.textContent='Nie udało się wczytać obrazka QR. Spróbuj ponownie (lub wyłącz blokery).';
-      };
-      img.src = url;
+        dlBtn.disabled=false;
+        copyBtn.disabled=false;
+      }, 0);
     }
 
     function downloadPNG(){
-      if(lastCanvasDataUrl){
-        const a = document.createElement('a');
-        a.href = lastCanvasDataUrl;
-        a.download = 'mecard-qr.png';
-        a.click();
-      } else if (lastPngUrl){
-        // fallback – bezpośredni PNG z Google
-        const a = document.createElement('a');
-        a.href = lastPngUrl;
-        a.download = 'mecard-qr.png';
-        a.click();
-      }
+      if(!lastCanvas) return;
+      const a=document.createElement('a');
+      a.download='mecard-qr.png';
+      a.href=lastCanvas.toDataURL('image/png');
+      a.click();
     }
 
     async function copyMECARD(){
-      try{
-        await navigator.clipboard.writeText(out.value);
-        copyBtn.textContent='Skopiowano ✔';
-        setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);
-      }catch{
-        alert('Nie udało się skopiować do schowka.');
-      }
+      try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200); }
+      catch{ alert('Nie udało się skopiować do schowka.'); }
     }
 
     genBtn.addEventListener('click', generateQR);
     dlBtn.addEventListener('click', downloadPNG);
     copyBtn.addEventListener('click', copyMECARD);
 
-    // przykładowe wartości
+    // Starter values
     document.getElementById('firstName').value='Michał';
     document.getElementById('lastName').value='Okoń';
     document.getElementById('org').value='TS Invest';
