@@ -158,12 +158,7 @@
         const ecc=eccMap[document.getElementById('qrEcc').value]||QRCode.CorrectLevel.M;
 
         qrcodeEl.innerHTML="";
-        qr=new QRCode(qrcodeEl,{   
-        text: QRCode.UTF8(mecard),
-        width: size,
-        height: size,
-        correctLevel: ecc
-        });
+        qr=new QRCode(qrcodeEl,{text:mecard,width:size,height:size,correctLevel:ecc});
         dlBtn.disabled=false; copyBtn.disabled=false;
       }
 
@@ -197,6 +192,7 @@
   </script>
 </body>
 </html>
+
 
 
 
