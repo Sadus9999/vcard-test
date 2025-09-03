@@ -233,17 +233,38 @@
   // schowaj ewentualny error
   errBox.style.display = 'none';
   errBox.textContent = '';
+
+  // zapamiętaj canvas do pobierania
+  window.lastCanvas = canvas;
+  dlBtn.disabled = false;
 }
 
 
-      function downloadPNG(){
-        if(!qr) return;
-        const canvas=qrcodeEl.querySelector('canvas');
-        const img=qrcodeEl.querySelector('img');
-        const link=document.createElement('a'); link.download='mecard-qr.png';
-        if(canvas){ link.href=canvas.toDataURL('image/png'); link.click(); return; }
-        if(img && img.src){ link.href=img.src; link.click(); }
-      }
+      function downloadPNG() {
+  const srcCanvas = window.lastCanvas || qrcodeEl.querySelector('canvas');
+  if (!srcCanvas) return;
+
+  // „quiet zone” ~8% dookoła, lepsze do druku
+  const margin = Math.round(srcCanvas.width * 0.08);
+  const size = srcCanvas.width + margin * 2;
+
+  const out = document.createElement('canvas');
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext('2d');
+
+  // tło białe
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, size, size);
+
+  // wklej QR z marginesem
+  ctx.drawImage(srcCanvas, margin, margin);
+
+  const a = document.createElement('a');
+  a.download = 'mecard-qr.png';
+  a.href = out.toDataURL('image/png');
+  a.click();
+}
 
       async function copyMECARD(){
         try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);}
