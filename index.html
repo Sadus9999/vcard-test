@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generator QR – MECARD</title>
-  <!-- QRCode.js (bez integrity, prosto z cdnjs) -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <title>Generator QR – MECARD (UTF-8, PNG+SVG)</title>
+  <!-- Biblioteka z możliwością ustawiania wersji QR (typeNumber) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
     .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -18,7 +17,7 @@
     button{border:1px solid #0f172a;border-radius:12px;padding:10px 14px;background:#0f172a;color:#fff;cursor:pointer}
     button[disabled]{opacity:.5;cursor:not-allowed}
     .row{display:flex;gap:8px;flex-wrap:wrap}
-    #qrcode{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px}
+    #qrcode{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px;background:#fff}
     .hint{font-size:12px;color:#64748b}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   </style>
@@ -26,24 +25,24 @@
 <body>
   <div class="wrap">
     <h1 style="margin:0 0 12px">Generator QR (MECARD)</h1>
-    <p class="hint" style="margin:0 0 16px">Wpisz dane i wygeneruj kod QR działający na iOS i Androidzie. Jeśli nie widzisz QR, wciśnij <b>Ctrl/Cmd+Shift+R</b> (twarde odświeżenie).</p>
+    <p class="hint" style="margin:0 0 16px">Obsługa polskich znaków (UTF-8), siłowe zwiększanie wersji QR, eksport PNG + SVG.</p>
 
     <div class="grid">
       <section class="card">
         <div class="grid">
           <div>
             <label>Imię *</label>
-            <input id="firstName" placeholder="Imię">
+            <input id="firstName" placeholder="Michał">
           </div>
           <div>
             <label>Nazwisko *</label>
-            <input id="lastName" placeholder="Nazwisko">
+            <input id="lastName" placeholder="Okoń">
           </div>
 
           <div class="grid" style="grid-template-columns:1fr 1fr">
             <div>
               <label>Telefon</label>
-              <input id="phone" placeholder="+48 numer">
+              <input id="phone" placeholder="+48600123456">
             </div>
             <div>
               <label>E-mail</label>
@@ -67,6 +66,7 @@
           <div class="row" style="margin-top:6px">
             <button id="genBtn">Generuj QR</button>
             <button id="dlBtn" disabled>Pobierz PNG</button>
+            <button id="dlSvgBtn" disabled>Pobierz SVG</button>
             <button id="copyBtn" disabled>Kopiuj MECARD</button>
           </div>
           <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
@@ -82,7 +82,7 @@
           <textarea id="mecardOut" class="mono" rows="4" readonly></textarea>
         </div>
 
-        <div style="margin-top:12px" class="grid" >
+        <div style="margin-top:12px" class="grid">
           <div>
             <label>Rozmiar QR</label>
             <select id="qrSize">
@@ -90,13 +90,14 @@
               <option selected>320</option>
               <option>384</option>
               <option>448</option>
+              <option>512</option>
             </select>
           </div>
           <div>
             <label>Korekcja błędów</label>
             <select id="qrEcc">
-              <option value="L">L</option>
-              <option value="M" selected>M</option>
+              <option value="L" selected>L (największa pojemność)</option>
+              <option value="M">M</option>
               <option value="Q">Q</option>
               <option value="H">H</option>
             </select>
@@ -107,177 +108,166 @@
   </div>
 
   <script>
-    // Zaczekaj aż biblioteka się załaduje (defer+DOMContentLoaded)
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof QRCode === 'undefined') {
-        const err = document.getElementById('err');
-        err.style.display = 'block';
-        err.textContent = 'Błąd: biblioteka QRCode.js się nie załadowała. Sprawdź blokady (uBlock/NoScript) lub odśwież stronę twardo (Ctrl/Cmd+Shift+R).';
+    // --- Helpery ---
+    function toUTF8(s){ return unescape(encodeURIComponent(s)); } // polskie znaki -> UTF-8
+    function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
+    function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
+
+    function buildMECARD(f){
+      const pts=[];
+      const ln=esc(f.lastName), fn=esc(f.firstName);
+      if (ln||fn) pts.push(`N:${ln}${ln&&fn?",":""}${fn}`);
+      if (f.org)   pts.push(`ORG:${esc(f.org)}`);
+      if (f.title) pts.push(`TITLE:${esc(f.title)}`);
+      const tel=normPhone(f.phone); if (tel) pts.push(`TEL:${tel}`);
+      if (f.email) pts.push(`EMAIL:${esc(f.email)}`);
+      if (f.url)   pts.push(`URL:${esc(f.url)}`);
+      return `MECARD:${pts.join(";")};;`;
+    }
+
+    // SVG z „quiet zone”
+    function qrToSVG(qr, marginModules = 4) {
+      const count = qr.getModuleCount();
+      const size = count + marginModules * 2;
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">`;
+      svg += `<rect width="100%" height="100%" fill="#fff"/>`;
+      svg += `<g fill="#000">`;
+      for (let r = 0; r < count; r++) {
+        for (let c = 0; c < count; c++) {
+          if (qr.isDark(r, c)) {
+            svg += `<rect x="${c + marginModules}" y="${r + marginModules}" width="1" height="1"/>`;
+          }
+        }
+      }
+      svg += `</g></svg>`;
+      return svg;
+    }
+
+    // --- Elementy UI ---
+    const qrcodeEl=document.getElementById('qrcode');
+    const out=document.getElementById('mecardOut');
+    const genBtn=document.getElementById('genBtn');
+    const dlBtn=document.getElementById('dlBtn');
+    const dlSvgBtn=document.getElementById('dlSvgBtn');
+    const copyBtn=document.getElementById('copyBtn');
+    const errBox=document.getElementById('err');
+    let lastSvg='';
+
+    function gen(){
+      errBox.style.display='none'; errBox.textContent='';
+
+      const f={
+        firstName:document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        phone:    document.getElementById('phone').value,
+        email:    document.getElementById('email').value,
+        org:      document.getElementById('org').value,
+        title:    document.getElementById('title').value,
+        url:      document.getElementById('url').value
+      };
+      if(!f.firstName||!f.lastName){alert('Podaj co najmniej imię i nazwisko.');return;}
+
+      const mecard=buildMECARD(f);
+      out.value=mecard;
+
+      const basePx=parseInt(document.getElementById('qrSize').value,10)||320;
+      const eccLetter=(document.getElementById('qrEcc').value||'L'); // L/M/Q/H
+
+      // rosnące wersje QR – większa pojemność
+      const tryTypes=[4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
+      let made=false, qr=null;
+
+      for(const t of tryTypes){
+        try{
+          qr = qrcode(t, eccLetter);         // biblioteka qrcode-generator
+          qr.addData(toUTF8(mecard), 'Byte'); // UTF-8 bajty
+          qr.make();                          // jeśli za mała wersja -> wyjątek
+          made=true; break;
+        }catch(e){ /* próbuj większą wersję */ }
+      }
+
+      qrcodeEl.innerHTML="";
+
+      if(!made){
+        errBox.style.display='block';
+        errBox.textContent='Za dużo danych nawet dla wersji 40 (ECC '+eccLetter+'). Skróć URL lub pola.';
+        dlBtn.disabled=true;
+        dlSvgBtn.disabled=true;
+        copyBtn.disabled=false;
         return;
       }
 
-      // --- UTF-8 helper (klucz do polskich znaków) ---
-      function toUTF8(s){ return unescape(encodeURIComponent(s)); }
+      // Render na canvas (skalujemy moduły do ~basePx)
+      const count=qr.getModuleCount();
+      const scale=Math.max(1, Math.floor(basePx / count));
+      const sizePx=scale*count;
 
-      // Escapowanie wg MECARD
-      function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
-      function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
-      function buildMECARD(f){
-        const pts=[];
-        const ln=esc(f.lastName), fn=esc(f.firstName);
-        if (ln||fn) pts.push(`N:${ln}${ln&&fn?",":""}${fn}`);
-        if (f.org)   pts.push(`ORG:${esc(f.org)}`);
-        if (f.title) pts.push(`TITLE:${esc(f.title)}`);
-        const tel=normPhone(f.phone); if (tel) pts.push(`TEL:${tel}`);
-        if (f.email) pts.push(`EMAIL:${esc(f.email)}`);
-        if (f.url)   pts.push(`URL:${esc(f.url)}`);
-        return `MECARD:${pts.join(";")};;`;
+      const canvas=document.createElement('canvas');
+      canvas.width=sizePx; canvas.height=sizePx;
+      const ctx=canvas.getContext('2d');
+
+      // tło białe
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,sizePx,sizePx);
+      // moduły
+      ctx.fillStyle='#000';
+      for(let r=0;r<count;r++){
+        for(let c=0;c<count;c++){
+          if(qr.isDark(r,c)){
+            ctx.fillRect(c*scale, r*scale, scale, scale);
+          }
+        }
       }
 
-      const eccMap={L:QRCode.CorrectLevel.L,M:QRCode.CorrectLevel.M,Q:QRCode.CorrectLevel.Q,H:QRCode.CorrectLevel.H};
-      const qrcodeEl=document.getElementById('qrcode');
-      const out=document.getElementById('mecardOut');
-      const genBtn=document.getElementById('genBtn');
-      const dlBtn=document.getElementById('dlBtn');
-      const copyBtn=document.getElementById('copyBtn');
-      let qr=null;
+      qrcodeEl.appendChild(canvas);
+      window.lastCanvas = canvas;     // do PNG
+      lastSvg = qrToSVG(qr, 4);       // do SVG
 
-      function gen() {
-  const f = {
-    firstName: document.getElementById('firstName').value,
-    lastName:  document.getElementById('lastName').value,
-    phone:     document.getElementById('phone').value,
-    email:     document.getElementById('email').value,
-    org:       document.getElementById('org').value,
-    title:     document.getElementById('title').value,
-    url:       document.getElementById('url').value
-  };
-  if (!f.firstName || !f.lastName) { alert('Podaj co najmniej imię i nazwisko.'); return; }
-
-  // Helpery z Twojego kodu (muszą istnieć wyżej):
-  // - toUTF8(s)
-  // - buildMECARD(f)
-
-  const mecard = buildMECARD(f);
-  out.value = mecard;
-
-  // ustawienia z UI
-  const sizeSelect = document.getElementById('qrSize');
-  const basePx  = parseInt(sizeSelect.value, 10) || 320;
-
-  // ECC -> litera dla qrcode-generator (L/M/Q/H)
-  // Żeby zmaksymalizować pojemność, bierzemy L; jak chcesz, możesz czytać z selecta.
-  const eccLetter = 'L';
-
-  // Spróbuj rosnących "typeNumber" = większa wersja QR (większa pojemność)
-  const tryTypes = [10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
-
-  let made = false;
-  let qr = null;
-
-  for (const t of tryTypes) {
-    try {
-      // qrcode(typeNumber, errorCorrectLevel)
-      qr = qrcode(t, eccLetter);
-      // Dodaj dane jako bajty (UTF-8)
-      qr.addData(toUTF8(mecard), 'Byte');
-      qr.make(); // <- jeśli za mała wersja, tu poleci wyjątek
-      made = true;
-      break;
-    } catch (e) {
-      // próbujemy większą wersję
-      continue;
+      dlBtn.disabled=false;
+      dlSvgBtn.disabled=false;
+      copyBtn.disabled=false;
     }
-  }
 
-  const errBox = document.getElementById('err');
-  qrcodeEl.innerHTML = "";
+    function downloadPNG(){
+      const srcCanvas = window.lastCanvas || qrcodeEl.querySelector('canvas');
+      if(!srcCanvas) return;
 
-  if (!made) {
-    errBox.style.display = 'block';
-    errBox.textContent = 'Nawet największa wersja QR (40, ECC L) nie mieści danych. Skróć URL/stanowisko/firme.';
-    dlBtn.disabled = true;
-    copyBtn.disabled = false; // kopiowanie tekstu niech działa
-    return;
-  }
+      // dodaj „quiet zone” ~8% dookoła
+      const margin = Math.round(srcCanvas.width * 0.08);
+      const size = srcCanvas.width + margin*2;
 
-  // Render: przerysuj macierz QR na <canvas> o żądanej wielkości w px
-  const count = qr.getModuleCount();
-  const pxPerModule = Math.floor(basePx / count) || 1;
-  const sizePx = pxPerModule * count;
+      const outC=document.createElement('canvas');
+      outC.width=size; outC.height=size;
+      const ctx=outC.getContext('2d');
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,size,size);
+      ctx.drawImage(srcCanvas, margin, margin);
 
-  const canvas = document.createElement('canvas');
-  canvas.width = sizePx;
-  canvas.height = sizePx;
-  const ctx = canvas.getContext('2d');
-
-  // tło białe
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0,0,sizePx,sizePx);
-  // moduły
-  ctx.fillStyle = '#000';
-  for (let r = 0; r < count; r++) {
-    for (let c = 0; c < count; c++) {
-      if (qr.isDark(r, c)) {
-        ctx.fillRect(c * pxPerModule, r * pxPerModule, pxPerModule, pxPerModule);
-      }
+      const a=document.createElement('a');
+      a.download='mecard-qr.png';
+      a.href=outC.toDataURL('image/png');
+      a.click();
     }
-  }
 
-  qrcodeEl.appendChild(canvas);
+    function downloadSVG(){
+      if(!lastSvg) return;
+      const blob = new Blob([lastSvg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mecard-qr.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
-  // włącz przyciski
-  dlBtn.disabled = false;
-  copyBtn.disabled = false;
+    async function copyMECARD(){
+      try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);}
+      catch{ alert('Nie udało się skopiować do schowka.'); }
+    }
 
-  // schowaj ewentualny error
-  errBox.style.display = 'none';
-  errBox.textContent = '';
-
-  // zapamiętaj canvas do pobierania
-  window.lastCanvas = canvas;
-  dlBtn.disabled = false;
-}
-
-
-      function downloadPNG() {
-  const srcCanvas = window.lastCanvas || qrcodeEl.querySelector('canvas');
-  if (!srcCanvas) return;
-
-  // „quiet zone” ~8% dookoła, lepsze do druku
-  const margin = Math.round(srcCanvas.width * 0.08);
-  const size = srcCanvas.width + margin * 2;
-
-  const out = document.createElement('canvas');
-  out.width = size;
-  out.height = size;
-  const ctx = out.getContext('2d');
-
-  // tło białe
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, size, size);
-
-  // wklej QR z marginesem
-  ctx.drawImage(srcCanvas, margin, margin);
-
-  const a = document.createElement('a');
-  a.download = 'mecard-qr.png';
-  a.href = out.toDataURL('image/png');
-  a.click();
-}
-
-      async function copyMECARD(){
-        try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);}
-        catch{ alert('Nie udało się skopiować do schowka.'); }
-      }
-
-      genBtn.addEventListener('click', gen);
-      dlBtn.addEventListener('click', downloadPNG);
-      copyBtn.addEventListener('click', copyMECARD);
-
-      // Starter values (możesz zmienić)
-   
-    });
+    // Listenery
+    document.getElementById('genBtn').addEventListener('click', gen);
+    dlBtn.addEventListener('click', downloadPNG);
+    dlSvgBtn.addEventListener('click', downloadSVG);
+    copyBtn.addEventListener('click', copyMECARD);
   </script>
 </body>
 </html>
