@@ -4,242 +4,191 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Generator QR – MECARD</title>
-  <!-- Tailwind (CDN) dla szybkiego, czystego wyglądu -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- QRCode.js (lekka biblioteka do QR, client-side) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-Mno96GQ9SxDtQ6r0unZcTtf+9t1j3qXc0l8z1d3bNfBS1X8b8o7cH+X9mWb3f5f5p0qvRkq7m3wG4YVPPQ8J+w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- QRCode.js (bez integrity, prosto z cdnjs) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <style>
-    .card { box-shadow: 0 10px 25px rgba(0,0,0,.06); }
-    .label { @apply text-sm text-slate-600 mb-1; }
-    .input { @apply w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-slate-900/10; }
-    .btn { @apply inline-flex items-center justify-center rounded-xl border border-slate-900 px-4 py-2; }
-    .btn-primary { @apply bg-slate-900 text-white hover:bg-slate-800; }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+    .wrap{max-width:1000px;margin:0 auto;padding:24px}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px}
+    .grid{display:grid;gap:16px}
+    @media(min-width:880px){.grid{grid-template-columns:1fr 1fr}}
+    label{display:block;font-size:13px;color:#475569;margin-bottom:4px}
+    input,select,textarea{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font-size:14px;outline:none}
+    button{border:1px solid #0f172a;border-radius:12px;padding:10px 14px;background:#0f172a;color:#fff;cursor:pointer}
+    button[disabled]{opacity:.5;cursor:not-allowed}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    #qrcode{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px}
+    .hint{font-size:12px;color:#64748b}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900 antialiased">
-  <main class="max-w-5xl mx-auto p-6">
-    <header class="mb-6">
-      <h1 class="text-2xl font-semibold">Generator QR (MECARD)</h1>
-      <p class="text-slate-600">Wpisz dane kontaktowe → wygeneruj <b>MECARD</b> i kod QR gotowy na wizytówkę.</p>
-    </header>
+<body>
+  <div class="wrap">
+    <h1 style="margin:0 0 12px">Generator QR (MECARD)</h1>
+    <p class="hint" style="margin:0 0 16px">Wpisz dane i wygeneruj kod QR działający na iOS i Androidzie. Jeśli nie widzisz QR, wciśnij <b>Ctrl/Cmd+Shift+R</b> (twarde odświeżenie).</p>
 
-    <div class="grid md:grid-cols-2 gap-6">
-      <!-- Formularz -->
-      <section class="card bg-white rounded-2xl p-5">
-        <div class="grid grid-cols-1 gap-4">
+    <div class="grid">
+      <section class="card">
+        <div class="grid">
           <div>
-            <div class="label">Imię *</div>
-            <input id="firstName" class="input" placeholder="Imię" />
+            <label>Imię *</label>
+            <input id="firstName" placeholder="Michał">
           </div>
           <div>
-            <div class="label">Nazwisko *</div>
-            <input id="lastName" class="input" placeholder="Nazwisko" />
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div class="label">Telefon</div>
-              <input id="phone" class="input" placeholder="+48123456789" />
-            </div>
-            <div>
-              <div class="label">E-mail</div>
-              <input id="email" class="input" placeholder="kontakt@twojadomena.pl" />
-            </div>
-          </div>
-          <div>
-            <div class="label">Firma</div>
-            <input id="org" class="input" placeholder="Twoja firma" />
-          </div>
-          <div>
-            <div class="label">Stanowisko</div>
-            <input id="title" class="input" placeholder="Twoje stanowisko" />
-          </div>
-          <div>
-            <div class="label">Strona www</div>
-            <input id="url" class="input" placeholder="https://twojadomena.pl" />
+            <label>Nazwisko *</label>
+            <input id="lastName" placeholder="Okoń">
           </div>
 
-          <div class="flex items-center gap-3 pt-2">
-            <button id="genBtn" class="btn btn-primary">Generuj QR</button>
-            <button id="dlBtn" class="btn" disabled>Pobierz PNG</button>
-            <button id="copyBtn" class="btn" disabled>Kopiuj MECARD</button>
+          <div class="grid" style="grid-template-columns:1fr 1fr">
+            <div>
+              <label>Telefon</label>
+              <input id="phone" placeholder="+48600123456">
+            </div>
+            <div>
+              <label>E-mail</label>
+              <input id="email" placeholder="kontakt@twojadomena.pl">
+            </div>
           </div>
-          <p class="text-xs text-slate-500">
-            Uwaga: w MECARD znaki specjalne <code>;</code>, <code>:</code>, <code>,</code> są automatycznie „ucieczone”.
-          </p>
+
+          <div>
+            <label>Firma</label>
+            <input id="org" placeholder="TS Invest">
+          </div>
+          <div>
+            <label>Stanowisko</label>
+            <input id="title" placeholder="UX/UI Designer">
+          </div>
+          <div>
+            <label>Strona www</label>
+            <input id="url" placeholder="https://twojadomena.pl">
+          </div>
+
+          <div class="row" style="margin-top:6px">
+            <button id="genBtn">Generuj QR</button>
+            <button id="dlBtn" disabled>Pobierz PNG</button>
+            <button id="copyBtn" disabled>Kopiuj MECARD</button>
+          </div>
+          <p class="hint">W MECARD znaki <code>\ ; : ,</code> są automatycznie „ucieczone”.</p>
+          <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
         </div>
       </section>
 
-      <!-- Podgląd QR + wynik -->
-      <section class="card bg-white rounded-2xl p-5">
-        <h2 class="font-medium mb-3">Podgląd</h2>
-        <div id="qrcode" class="flex items-center justify-center w-full min-h-[260px] border border-slate-100 rounded-xl"></div>
+      <section class="card">
+        <h3 style="margin:0 0 10px">Podgląd</h3>
+        <div id="qrcode"></div>
 
-        <div class="mt-4">
-          <div class="label">Wynikowy MECARD</div>
-          <textarea id="mecardOut" class="input font-mono text-sm h-28" readonly></textarea>
+        <div style="margin-top:12px">
+          <label>Wynikowy MECARD</label>
+          <textarea id="mecardOut" class="mono" rows="4" readonly></textarea>
         </div>
 
-        <details class="mt-4">
-          <summary class="cursor-pointer text-sm text-slate-600">Ustawienia</summary>
-          <div class="grid grid-cols-2 gap-4 mt-3">
-            <div>
-              <div class="label">Rozmiar QR</div>
-              <select id="qrSize" class="input">
-                <option>256</option>
-                <option selected>320</option>
-                <option>384</option>
-                <option>448</option>
-              </select>
-            </div>
-            <div>
-              <div class="label">Korekcja błędów</div>
-              <select id="qrEcc" class="input">
-                <option value="L">L (najlżejszy)</option>
-                <option value="M" selected>M (domyślny)</option>
-                <option value="Q">Q</option>
-                <option value="H">H (najmocniejszy)</option>
-              </select>
-            </div>
+        <div style="margin-top:12px" class="grid" >
+          <div>
+            <label>Rozmiar QR</label>
+            <select id="qrSize">
+              <option>256</option>
+              <option selected>320</option>
+              <option>384</option>
+              <option>448</option>
+            </select>
           </div>
-          <p class="text-xs text-slate-500 mt-2">
-            Do druku wizytówki zwykle wystarczy 256–320 px i ECC „M/Q” (przy zostawieniu „quiet zone” wokół kodu).
-          </p>
-        </details>
+          <div>
+            <label>Korekcja błędów</label>
+            <select id="qrEcc">
+              <option value="L">L</option>
+              <option value="M" selected>M</option>
+              <option value="Q">Q</option>
+              <option value="H">H</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:6px">Do wizytówki zwykle wystarczy 20–25 mm i ECC M/Q (zostaw „quiet zone”).</p>
       </section>
     </div>
-  </main>
+  </div>
 
   <script>
-    // --- Pomocnicze: escapowanie znaków rezerwowych wg MECARD ---
-    function escapeMECARD(value = "") {
-      // MECARD używa ; jako separatora pól i , w polu N: (Nazwisko,Imię).
-      // Wartości pól powinny escape'ować: backslash, semikolon, dwukropek i przecinek.
-      return value
-        .replace(/\\/g, "\\\\")
-        .replace(/;/g, "\\;")
-        .replace(/:/g, "\\:")
-        .replace(/,/g, "\\,")
-        .trim();
-    }
-
-    // Oczyszczanie telefonu – akceptujemy cyfry, + i średnik (na wypadek kilku numerów).
-    function normalizePhone(t = "") {
-      return t.replace(/[^\d+;]/g, "");
-    }
-
-    // Budowa łańcucha MECARD
-    function buildMECARD(fields) {
-      const pts = [];
-      const ln = escapeMECARD(fields.lastName);
-      const fn = escapeMECARD(fields.firstName);
-      if (ln || fn) pts.push(`N:${ln}${ln && fn ? "," : ""}${fn}`);
-
-      if (fields.org)   pts.push(`ORG:${escapeMECARD(fields.org)}`);
-      if (fields.title) pts.push(`TITLE:${escapeMECARD(fields.title)}`);
-
-      const tel = normalizePhone(fields.phone);
-      if (tel) pts.push(`TEL:${tel}`);
-
-      if (fields.email) pts.push(`EMAIL:${escapeMECARD(fields.email)}`);
-      if (fields.url)   pts.push(`URL:${escapeMECARD(fields.url)}`);
-
-      // Ważne: na końcu podwójny ; (koniec rekordu wg zwyczaju MECARD)
-      return `MECARD:${pts.join(";")};;`;
-    }
-
-    // Mapowanie ECC do biblioteki
-    const eccMap = { L: QRCode.CorrectLevel.L, M: QRCode.CorrectLevel.M, Q: QRCode.CorrectLevel.Q, H: QRCode.CorrectLevel.H };
-
-    let qr; // instancja QRCode
-    const qrcodeEl = document.getElementById("qrcode");
-    const mecardOut = document.getElementById("mecardOut");
-    const genBtn = document.getElementById("genBtn");
-    const dlBtn  = document.getElementById("dlBtn");
-    const copyBtn = document.getElementById("copyBtn");
-
-    function generateQR() {
-      const fields = {
-        firstName: document.getElementById("firstName").value,
-        lastName:  document.getElementById("lastName").value,
-        phone:     document.getElementById("phone").value,
-        email:     document.getElementById("email").value,
-        org:       document.getElementById("org").value,
-        title:     document.getElementById("title").value,
-        url:       document.getElementById("url").value,
-      };
-
-      if (!fields.firstName || !fields.lastName) {
-        alert("Podaj co najmniej imię i nazwisko.");
+    // Zaczekaj aż biblioteka się załaduje (defer+DOMContentLoaded)
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof QRCode === 'undefined') {
+        const err = document.getElementById('err');
+        err.style.display = 'block';
+        err.textContent = 'Błąd: biblioteka QRCode.js się nie załadowała. Sprawdź blokady (uBlock/NoScript) lub odśwież stronę twardo (Ctrl/Cmd+Shift+R).';
         return;
       }
 
-      const mecard = buildMECARD(fields);
-      mecardOut.value = mecard;
-
-      // Parametry QR
-      const size = parseInt(document.getElementById("qrSize").value, 10) || 320;
-      const ecc  = eccMap[document.getElementById("qrEcc").value] || QRCode.CorrectLevel.M;
-
-      // Reset podglądu
-      qrcodeEl.innerHTML = "";
-
-      // Render QR (biblioteka sama tworzy <canvas> lub <img>)
-      qr = new QRCode(qrcodeEl, {
-        text: mecard,
-        width: size,
-        height: size,
-        correctLevel: ecc,
-        // margin (quiet zone) – ta biblioteka nie ma natywnej opcji,
-        // ale dodaje domyślny margines; do druku i tak zostaw białe pole wokół samego obrazka.
-      });
-
-      dlBtn.disabled = false;
-      copyBtn.disabled = false;
-    }
-
-    function downloadPNG() {
-      if (!qr) return;
-      // Spróbuj złapać <canvas>; jeśli biblioteka wyrenderowała <img>, konwertujemy.
-      const canvas = qrcodeEl.querySelector("canvas");
-      if (canvas) {
-        const link = document.createElement("a");
-        link.download = "mecard-qr.png";
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      } else {
-        const img = qrcodeEl.querySelector("img");
-        if (img && img.src) {
-          const link = document.createElement("a");
-          link.download = "mecard-qr.png";
-          link.href = img.src;
-          link.click();
-        }
+      // Escapowanie wg MECARD
+      function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
+      function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
+      function buildMECARD(f){
+        const pts=[];
+        const ln=esc(f.lastName), fn=esc(f.firstName);
+        if (ln||fn) pts.push(`N:${ln}${ln&&fn?",":""}${fn}`);
+        if (f.org)   pts.push(`ORG:${esc(f.org)}`);
+        if (f.title) pts.push(`TITLE:${esc(f.title)}`);
+        const tel=normPhone(f.phone); if (tel) pts.push(`TEL:${tel}`);
+        if (f.email) pts.push(`EMAIL:${esc(f.email)}`);
+        if (f.url)   pts.push(`URL:${esc(f.url)}`);
+        return `MECARD:${pts.join(";")};;`;
       }
-    }
 
-    async function copyMECARD() {
-      try {
-        await navigator.clipboard.writeText(mecardOut.value);
-        copyBtn.textContent = "Skopiowano ✔";
-        setTimeout(() => (copyBtn.textContent = "Kopiuj MECARD"), 1200);
-      } catch {
-        alert("Nie udało się skopiować do schowka.");
+      const eccMap={L:QRCode.CorrectLevel.L,M:QRCode.CorrectLevel.M,Q:QRCode.CorrectLevel.Q,H:QRCode.CorrectLevel.H};
+      const qrcodeEl=document.getElementById('qrcode');
+      const out=document.getElementById('mecardOut');
+      const genBtn=document.getElementById('genBtn');
+      const dlBtn=document.getElementById('dlBtn');
+      const copyBtn=document.getElementById('copyBtn');
+      let qr=null;
+
+      function gen(){
+        const f={
+          firstName:document.getElementById('firstName').value,
+          lastName: document.getElementById('lastName').value,
+          phone:    document.getElementById('phone').value,
+          email:    document.getElementById('email').value,
+          org:      document.getElementById('org').value,
+          title:    document.getElementById('title').value,
+          url:      document.getElementById('url').value
+        };
+        if(!f.firstName||!f.lastName){alert('Podaj co najmniej imię i nazwisko.');return;}
+        const mecard=buildMECARD(f);
+        out.value=mecard;
+
+        const size=parseInt(document.getElementById('qrSize').value,10)||320;
+        const ecc=eccMap[document.getElementById('qrEcc').value]||QRCode.CorrectLevel.M;
+
+        qrcodeEl.innerHTML="";
+        qr=new QRCode(qrcodeEl,{text:mecard,width:size,height:size,correctLevel:ecc});
+        dlBtn.disabled=false; copyBtn.disabled=false;
       }
-    }
 
-    genBtn.addEventListener("click", generateQR);
-    dlBtn.addEventListener("click", downloadPNG);
-    copyBtn.addEventListener("click", copyMECARD);
+      function downloadPNG(){
+        if(!qr) return;
+        const canvas=qrcodeEl.querySelector('canvas');
+        const img=qrcodeEl.querySelector('img');
+        const link=document.createElement('a'); link.download='mecard-qr.png';
+        if(canvas){ link.href=canvas.toDataURL('image/png'); link.click(); return; }
+        if(img && img.src){ link.href=img.src; link.click(); }
+      }
 
-    // Podstaw przykładowe wartości (możesz usunąć)
-    document.getElementById("firstName").value = "Michał";
-    document.getElementById("lastName").value  = "Okoń";
-    document.getElementById("org").value       = "TS Invest";
-    document.getElementById("title").value     = "UX/UI Designer";
-    document.getElementById("phone").value     = "+48600123456";
-    document.getElementById("email").value     = "kontakt@twojadomena.pl";
-    document.getElementById("url").value       = "https://twojadomena.pl";
+      async function copyMECARD(){
+        try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);}
+        catch{ alert('Nie udało się skopiować do schowka.'); }
+      }
+
+      genBtn.addEventListener('click', gen);
+      dlBtn.addEventListener('click', downloadPNG);
+      copyBtn.addEventListener('click', copyMECARD);
+
+      // Starter values (możesz usunąć)
+      document.getElementById('firstName').value='Michał';
+      document.getElementById('lastName').value='Okoń';
+      document.getElementById('org').value='TS Invest';
+      document.getElementById('title').value='UX/UI Designer';
+      document.getElementById('phone').value='+48600123456';
+      document.getElementById('email').value='kontakt@twojadomena.pl';
+      document.getElementById('url').value='https://twojadomena.pl';
+    });
   </script>
 </body>
 </html>
-
