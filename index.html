@@ -68,6 +68,7 @@
             <button id="dlBtn" disabled>Pobierz PNG</button>
             <button id="copyBtn" disabled>Kopiuj MECARD</button>
           </div>
+         <!-- <p class="hint">W MECARD znaki <code>\ ; : ,</code> są automatycznie „ucieczone”.</p>-->
           <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
         </div>
       </section>
@@ -101,7 +102,7 @@
             </select>
           </div>
         </div>
-        <p class="hint" style="margin-top:6px">Do wizytówki zwykle wystarczy 20–25 mm i ECC M/Q (zostaw „quiet zone”).</p>
+        <!--<p class="hint" style="margin-top:6px">Do wizytówki zwykle wystarczy 20–25 mm i ECC M/Q (zostaw „quiet zone”).</p>-->
       </section>
     </div>
   </div>
@@ -180,10 +181,10 @@
       copyBtn.addEventListener('click', copyMECARD);
 
       // Starter values (możesz usunąć)
-      document.getElementById('firstName').value='Michał';
-      document.getElementById('lastName').value='Okoń';
-      document.getElementById('org').value='TS Invest';
-      document.getElementById('title').value='UX/UI Designer';
+      document.getElementById('firstName').value='Imię';
+      document.getElementById('lastName').value='Nazwisko';
+      document.getElementById('org').value='Twoja firma';
+      document.getElementById('title').value='Twoje stanowisko';
       document.getElementById('phone').value='+48600123456';
       document.getElementById('email').value='kontakt@twojadomena.pl';
       document.getElementById('url').value='https://twojadomena.pl';
@@ -191,3 +192,5 @@
   </script>
 </body>
 </html>
+
+
