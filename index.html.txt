@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Kontakt – offline (MECARD)</title>
+
+  <!-- qrcode-generator: można wymuszać większą wersję QR, ale tu i tak będzie mała -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+    .wrap{max-width:900px;margin:0 auto;padding:24px}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px}
+    .grid{display:grid;gap:16px}
+    @media(min-width:880px){.grid{grid-template-columns:1fr 1fr}}
+    label{display:block;font-size:13px;color:#475569;margin-bottom:4px}
+    input{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font-size:14px;outline:none}
+    button{border:1px solid #0f172a;border-radius:12px;padding:10px 14px;background:#0f172a;color:#fff;cursor:pointer}
+    button[disabled]{opacity:.5;cursor:not-allowed}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    #qrcode{display:flex;align-items:center;justify-content:center;min-height:260px;border:1px dashed #e2e8f0;border-radius:12px;background:#fff}
+    .hint{font-size:12px;color:#64748b}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 style="margin:0 0 10px">QR Kontakt (offline)</h1>
+    <p class="hint" style="margin:0 0 16px">
+      Minimalny payload: <b>Imię + Nazwisko + Telefon</b>. Format MECARD, ECC=L (maks. pojemność, najmniej “kratek”).
+    </p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="grid">
+          <div>
+            <label>Imię *</label>
+            <input id="firstName" placeholder="Michał">
+          </div>
+          <div>
+            <label>Nazwisko *</label>
+            <input id="lastName" placeholder="Okoń">
+          </div>
+          <div>
+            <label>Telefon *</label>
+            <input id="phone" placeholder="+48600123456">
+          </div>
+
+          <div class="row" style="margin-top:6px">
+            <button id="genBtn">Generuj QR</button>
+            <button id="dlPngBtn" disabled>Pobierz PNG</button>
+            <button id="dlSvgBtn" disabled>Pobierz SVG</button>
+            <button id="copyBtn" disabled>Kopiuj treść</button>
+          </div>
+
+          <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3 style="margin:0 0 10px">Podgląd</h3>
+        <div id="qrcode"></div>
+
+        <div style="margin-top:12px">
+          <label>Treść MECARD</label>
+          <textarea id="out" class="mono" rows="3" readonly style="width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font-size:14px;"></textarea>
+        </div>
+
+        <p class="hint" style="margin-top:10px">
+          Tip: do druku zachowaj białą ramkę (quiet zone). SVG jest najlepsze do drukarni.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // UTF-8 (polskie znaki)
+    function toUTF8(s){ return unescape(encodeURIComponent(s)); }
+
+    // MECARD: escapowanie specjalnych znaków
+    function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
+    function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
+
+    function buildMECARDMinimal(firstName, lastName, phone){
+      const fn = esc(firstName);
+      const ln = esc(lastName);
+      const tel = normPhone(phone);
+      // Minimalny, kompatybilny MECARD
+      // N: Nazwisko,Imię
+      // TEL: telefon
+      return `MECARD:N:${ln}${(ln&&fn)?",":""}${fn};TEL:${tel};;`;
+    }
+
+    function qrToSVG(qr, marginModules = 4) {
+      const count = qr.getModuleCount();
+      const size = count + marginModules * 2;
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">`;
+      svg += `<rect width="100%" height="100%" fill="#fff"/>`;
+      svg += `<g fill="#000">`;
+      for (let r = 0; r < count; r++) {
+        for (let c = 0; c < count; c++) {
+          if (qr.isDark(r, c)) {
+            svg += `<rect x="${c + marginModules}" y="${r + marginModules}" width="1" height="1"/>`;
+          }
+        }
+      }
+      svg += `</g></svg>`;
+      return svg;
+    }
+
+    const qrcodeEl = document.getElementById('qrcode');
+    const out = document.getElementById('out');
+    const err = document.getElementById('err');
+    const genBtn = document.getElementById('genBtn');
+    const dlPngBtn = document.getElementById('dlPngBtn');
+    const dlSvgBtn = document.getElementById('dlSvgBtn');
+    const copyBtn = document.getElementById('copyBtn');
+
+    let lastSvg = '';
+    window.lastCanvas = null;
+
+    function gen(){
+      err.style.display='none'; err.textContent='';
+
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName  = document.getElementById('lastName').value.trim();
+      const phone     = document.getElementById('phone').value.trim();
+
+      if(!firstName || !lastName || !phone){
+        alert('Uzupełnij: imię, nazwisko i telefon.');
+        return;
+      }
+
+      const payload = buildMECARDMinimal(firstName, lastName, phone);
+      out.value = payload;
+
+      // ECC = L (najmniej gęsty)
+      const eccLetter = 'L';
+
+      // Spróbuj najmniejszych wersji, a jak trzeba to rośnij (zwykle zmieści się bardzo wcześnie)
+      const tryTypes = [1,2,3,4,5,6,7,8,9,10,12,14,16,20,24,28,32,36,40];
+
+      let qr = null;
+      let made = false;
+
+      for(const t of tryTypes){
+        try{
+          qr = qrcode(t, eccLetter);
+          qr.addData(toUTF8(payload), 'Byte');
+          qr.make();
+          made = true;
+          break;
+        } catch(e){
+          continue;
+        }
+      }
+
+      qrcodeEl.innerHTML = "";
+
+      if(!made){
+        err.style.display='block';
+        err.textContent='Nie udało się wygenerować QR (za dużo danych).';
+        dlPngBtn.disabled = true;
+        dlSvgBtn.disabled = true;
+        copyBtn.disabled = false;
+        return;
+      }
+
+      // Render na canvas (czytelny podgląd)
+      const count = qr.getModuleCount();
+      const desiredPx = 320;
+      const scale = Math.max(1, Math.floor(desiredPx / count));
+      const sizePx = scale * count;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = sizePx;
+      canvas.height = sizePx;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,sizePx,sizePx);
+
+      ctx.fillStyle = '#000';
+      for(let r=0;r<count;r++){
+        for(let c=0;c<count;c++){
+          if(qr.isDark(r,c)){
+            ctx.fillRect(c*scale, r*scale, scale, scale);
+          }
+        }
+      }
+
+      qrcodeEl.appendChild(canvas);
+      window.lastCanvas = canvas;
+
+      lastSvg = qrToSVG(qr, 4);
+
+      dlPngBtn.disabled = false;
+      dlSvgBtn.disabled = false;
+      copyBtn.disabled = false;
+    }
+
+    function downloadPNG(){
+      const srcCanvas = window.lastCanvas || qrcodeEl.querySelector('canvas');
+      if(!srcCanvas) return;
+
+      // quiet zone ~8%
+      const margin = Math.round(srcCanvas.width * 0.08);
+      const size = srcCanvas.width + margin*2;
+
+      const outC = document.createElement('canvas');
+      outC.width = size; outC.height = size;
+      const ctx = outC.getContext('2d');
+
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,size,size);
+      ctx.drawImage(srcCanvas, margin, margin);
+
+      const a = document.createElement('a');
+      a.download = 'kontakt-qr.png';
+      a.href = outC.toDataURL('image/png');
+      a.click();
+    }
+
+    function downloadSVG(){
+      if(!lastSvg) return;
+      const blob = new Blob([lastSvg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'kontakt-qr.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyText(){
+      try{
+        await navigator.clipboard.writeText(out.value);
+        copyBtn.textContent='Skopiowano ✔';
+        setTimeout(()=>copyBtn.textContent='Kopiuj treść',1200);
+      } catch {
+        alert('Nie udało się skopiować.');
+      }
+    }
+
+    genBtn.addEventListener('click', gen);
+    dlPngBtn.addEventListener('click', downloadPNG);
+    dlSvgBtn.addEventListener('click', downloadSVG);
+    copyBtn.addEventListener('click', copyText);
+
+    // startowe wartości (możesz usunąć)
+    document.getElementById('firstName').value='Michał';
+    document.getElementById('lastName').value='Okoń';
+    document.getElementById('phone').value='+48600123456';
+  </script>
+</body>
+</html>
