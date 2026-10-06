@@ -131,7 +131,7 @@
       ];
 
       const tel=normPhone(f.phone);
-      if (tel)     lines.push(`TEL;TYPE=CELL:${tel}`);
+      if (tel)     lines.push(`TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:${tel}`);
       if (f.email) lines.push(`EMAIL;TYPE=INTERNET:${esc(f.email)}`);
       if (f.org)   lines.push(`ORG:${esc(f.org)}`);
       if (f.title) lines.push(`TITLE:${esc(f.title)}`);
