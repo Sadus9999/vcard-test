@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generator QR – MECARD (UTF-8, PNG+SVG)</title>
+  <title>Generator QR – vCard 3.0 (UTF-8, PNG+SVG)</title>
   <!-- Biblioteka z możliwością ustawiania wersji QR (typeNumber) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <style>
@@ -24,7 +24,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h1 style="margin:0 0 12px">Generator QR (MECARD)</h1>
+    <h1 style="margin:0 0 12px">Generator QR (vCard 3.0)</h1>
     <!--<p class="hint" style="margin:0 0 16px">Obsługa polskich znaków (UTF-8), siłowe zwiększanie wersji QR, eksport PNG + SVG.</p>-->
 
     <div class="grid">
@@ -67,7 +67,7 @@
             <button id="genBtn">Generuj QR</button>
             <button id="dlBtn" disabled>Pobierz PNG</button>
             <button id="dlSvgBtn" disabled>Pobierz SVG</button>
-            <button id="copyBtn" disabled>Kopiuj MECARD</button>
+            <button id="copyBtn" disabled>Kopiuj vCard</button>
           </div>
           <div id="err" class="hint" style="color:#b91c1c;display:none"></div>
         </div>
@@ -78,8 +78,8 @@
         <div id="qrcode"></div>
 
         <div style="margin-top:12px">
-          <label>Wynikowy MECARD</label>
-          <textarea id="mecardOut" class="mono" rows="4" readonly></textarea>
+          <label>Wynikowy vCard 3.0</label>
+          <textarea id="vcardOut" class="mono" rows="4" readonly></textarea>
         </div>
 
         <div style="margin-top:12px" class="grid">
@@ -145,7 +145,7 @@
 
     // --- Elementy UI ---
     const qrcodeEl=document.getElementById('qrcode');
-    const out=document.getElementById('mecardOut');
+    const out=document.getElementById('vcardOut');
     const genBtn=document.getElementById('genBtn');
     const dlBtn=document.getElementById('dlBtn');
     const dlSvgBtn=document.getElementById('dlSvgBtn');
@@ -180,7 +180,7 @@
       for(const t of tryTypes){
         try{
           qr = qrcode(t, eccLetter);         // biblioteka qrcode-generator
-          qr.addData(toUTF8(mecard), 'Byte'); // UTF-8 bajty
+          qr.addData(toUTF8(vcard), 'Byte'); // UTF-8 bajty
           qr.make();                          // jeśli za mała wersja -> wyjątek
           made=true; break;
         }catch(e){ /* próbuj większą wersję */ }
@@ -242,7 +242,7 @@
       ctx.drawImage(srcCanvas, margin, margin);
 
       const a=document.createElement('a');
-      a.download='mecard-qr.png';
+      a.download='vcard-qr.png';
       a.href=outC.toDataURL('image/png');
       a.click();
     }
@@ -253,13 +253,13 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'mecard-qr.svg';
+      a.download = 'vcard-qr.svg';
       a.click();
       URL.revokeObjectURL(url);
     }
 
-    async function copyMECARD(){
-      try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj MECARD',1200);}
+    async function copyVCard(){
+      try{ await navigator.clipboard.writeText(out.value); copyBtn.textContent='Skopiowano ✔'; setTimeout(()=>copyBtn.textContent='Kopiuj vCard',1200);}
       catch{ alert('Nie udało się skopiować do schowka.'); }
     }
 
@@ -267,7 +267,7 @@
     document.getElementById('genBtn').addEventListener('click', gen);
     dlBtn.addEventListener('click', downloadPNG);
     dlSvgBtn.addEventListener('click', downloadSVG);
-    copyBtn.addEventListener('click', copyMECARD);
+    copyBtn.addEventListener('click', copyVCard);
   </script>
 </body>
 </html>
