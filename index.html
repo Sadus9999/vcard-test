@@ -108,6 +108,9 @@
   </div>
 
   <script>
+    if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) {
+      qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    }
     // --- Helpery ---
     function toUTF8(s){ return unescape(encodeURIComponent(s)); } // polskie znaki -> UTF-8
     function esc(v=""){
