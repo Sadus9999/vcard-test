@@ -110,19 +110,35 @@
   <script>
     // --- Helpery ---
     function toUTF8(s){ return unescape(encodeURIComponent(s)); } // polskie znaki -> UTF-8
-    function esc(v=""){return v.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/:/g,"\\:").replace(/,/g,"\\,").trim()}
-    function normPhone(v=""){return v.replace(/[^\d+;]/g,"")}
+    function esc(v=""){
+      return v
+        .replace(/\\/g,"\\\\")
+        .replace(/\r?\n/g,"\\n")
+        .replace(/;/g,"\\;")
+        .replace(/,/g,"\\,")
+        .trim();
+    }
+    function normPhone(v=""){return v.replace(/[^\d+]/g,"")}
 
-    function buildMECARD(f){
-      const pts=[];
-      const ln=esc(f.lastName), fn=esc(f.firstName);
-      if (ln||fn) pts.push(`N:${ln}${ln&&fn?",":""}${fn}`);
-      if (f.org)   pts.push(`ORG:${esc(f.org)}`);
-      if (f.title) pts.push(`TITLE:${esc(f.title)}`);
-      const tel=normPhone(f.phone); if (tel) pts.push(`TEL:${tel}`);
-      if (f.email) pts.push(`EMAIL:${esc(f.email)}`);
-      if (f.url)   pts.push(`URL:${esc(f.url)}`);
-      return `MECARD:${pts.join(";")};;`;
+    function buildVCard(f){
+      const fn=esc(f.firstName);
+      const ln=esc(f.lastName);
+      const lines=[
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        `N:${ln};${fn};;;`,
+        `FN:${fn}${fn&&ln?" ":""}${ln}`
+      ];
+
+      const tel=normPhone(f.phone);
+      if (tel)     lines.push(`TEL;TYPE=CELL:${tel}`);
+      if (f.email) lines.push(`EMAIL;TYPE=INTERNET:${esc(f.email)}`);
+      if (f.org)   lines.push(`ORG:${esc(f.org)}`);
+      if (f.title) lines.push(`TITLE:${esc(f.title)}`);
+      if (f.url)   lines.push(`URL:${f.url.trim()}`);
+
+      lines.push("END:VCARD");
+      return lines.join("\r\n");
     }
 
     // SVG z „quiet zone”
@@ -167,8 +183,8 @@
       };
       if(!f.firstName||!f.lastName){alert('Podaj co najmniej imię i nazwisko.');return;}
 
-      const mecard=buildMECARD(f);
-      out.value=mecard;
+      const vcard=buildVCard(f);
+      out.value=vcard;
 
       const basePx=parseInt(document.getElementById('qrSize').value,10)||320;
       const eccLetter=(document.getElementById('qrEcc').value||'L'); // L/M/Q/H
