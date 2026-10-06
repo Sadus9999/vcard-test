@@ -188,30 +188,25 @@
 
       const basePx=parseInt(document.getElementById('qrSize').value,10)||320;
       const eccLetter=(document.getElementById('qrEcc').value||'L'); // L/M/Q/H
+      // typeNumber = 0: biblioteka automatycznie dobiera najmniejszą wersję QR.
+      // Przekazujemy zwykły JS string; biblioteka sama obsługuje kodowanie.
+      let qr=null;
 
-      // rosnące wersje QR – większa pojemność
-      const tryTypes=[4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
-      let made=false, qr=null;
-
-      for(const t of tryTypes){
-        try{
-          qr = qrcode(t, eccLetter);         // biblioteka qrcode-generator
-          qr.addData(toUTF8(vcard), 'Byte'); // UTF-8 bajty
-          qr.make();                          // jeśli za mała wersja -> wyjątek
-          made=true; break;
-        }catch(e){ /* próbuj większą wersję */ }
-      }
-
-      qrcodeEl.innerHTML="";
-
-      if(!made){
+      try{
+        qr = qrcode(0, eccLetter);
+        qr.addData(vcard, 'Byte');
+        qr.make();
+      }catch(e){
+        qrcodeEl.innerHTML="";
         errBox.style.display='block';
-        errBox.textContent='Za dużo danych nawet dla wersji 40 (ECC '+eccLetter+'). Skróć URL lub pola.';
+        errBox.textContent='Nie udało się wygenerować QR: '+(e && e.message ? e.message : e);
         dlBtn.disabled=true;
         dlSvgBtn.disabled=true;
         copyBtn.disabled=false;
         return;
       }
+
+      qrcodeEl.innerHTML="";
 
       // Render na canvas (skalujemy moduły do ~basePx)
       const count=qr.getModuleCount();
